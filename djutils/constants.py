@@ -1,0 +1,11 @@
+LIVE_STATUS = 1
+DRAFT_STATUS = 2
+PENDING_REVIEW = 3
+DELETED_STATUS = 9
+
+STATUS_CHOICES = (
+    (LIVE_STATUS, 'Public'),
+    (DRAFT_STATUS, 'Draft'),
+    (PENDING_REVIEW, 'Pending Review'),
+    (DELETED_STATUS, 'Deleted'),
+)
