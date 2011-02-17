@@ -8,7 +8,7 @@ readme = f.read()
 f.close()
 
 setup(
-    name='django-utils',
+    name='djutils',
     version=".".join(map(str, VERSION)),
     description='a collection of tools',
     long_description=readme,
