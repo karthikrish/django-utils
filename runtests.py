@@ -17,6 +17,7 @@ if not settings.configured:
         DATABASE_ENGINE = db_engine,
         DATABASE_NAME = db_name,
         INSTALLED_APPS = [
+            'django.contrib.auth',
             'django.contrib.contenttypes',
             'djutils',
             'djutils.tests',
