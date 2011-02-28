@@ -8,14 +8,21 @@ if len(sys.argv) > 1 and 'postgres' in sys.argv:
     sys.argv.remove('postgres')
     db_engine = 'postgresql_psycopg2'
     db_name = 'test_main'
+    db_test_name = ''
 else:
     db_engine = 'sqlite3'
+    db_test_name = 'testing.db' # use a non-memory db for access across threads
     db_name = ''
 
 if not settings.configured:
     settings.configure(
-        DATABASE_ENGINE = db_engine,
-        DATABASE_NAME = db_name,
+        DATABASES = {
+            'default': {
+                'NAME': db_name,
+                'TEST_NAME': db_test_name,
+                'ENGINE': db_engine,
+            }
+        },
         INSTALLED_APPS = [
             'django.contrib.auth',
             'django.contrib.contenttypes',

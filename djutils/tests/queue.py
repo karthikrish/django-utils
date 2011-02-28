@@ -1,31 +1,38 @@
+import time
+
 from django.contrib.auth.models import User
-from django.test import TestCase
 
 from djutils.queue import Invoker, QueueCommand, QueueException, queue_command
+from djutils.test import TestCase
 
 
 class UserCommand(QueueCommand):
     def execute(self):
-        receiver, old_email, new_email = self.data
-        receiver.email = new_email
-        receiver.save()
+        user, old_email, new_email = self.data
+        user.email = new_email
+        user.save()
 
     def undo(self):
-        receiver, old_email, new_email = self.data
-        receiver.email = old_email
-        receiver.save()
+        user, old_email, new_email = self.data
+        user.email = old_email
+        user.save()
 
+
+@queue_command(queue_name='test-queue')
+def user_command(user, data):
+    user.email = data
+    user.save()
 
 @queue_command
-def user_command(receiver, data):
-    receiver.email = data
-    receiver.save()
+def user_command_no_args(user, data):
+    user.email = data
+    user.save()
 
 
-class SimpleTest(TestCase):
+class QueueTest(TestCase):
     def setUp(self):
         self.dummy = User.objects.create_user('username', 'user@example.com', 'password')
-        self.invoker = Invoker()
+        self.invoker = Invoker(queue_name='test-queue')
         self.invoker.flush()
         self.invoker._stack = []
 
@@ -50,8 +57,8 @@ class SimpleTest(TestCase):
         invoker.dequeue()
 
         # make sure the command's execute() method got called
-        self.dummy = User.objects.get(username='username')
-        self.assertEqual(self.dummy.email, 'nobody@example.com')
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'nobody@example.com')
 
         # check the stack - should now show 1 item having been executed
         self.assertEqual(len(invoker._stack), 1)
@@ -63,14 +70,33 @@ class SimpleTest(TestCase):
         self.assertEqual(len(invoker.queue), 1)
 
         # the user's email address hasn't changed yet
-        self.assertEqual(self.dummy.email, 'user@example.com')
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'user@example.com')
 
         # dequeue
         invoker.dequeue()
 
         # make sure that the command was executed
-        self.dummy = User.objects.get(username='username')
-        self.assertEqual(self.dummy.email, 'decor@ted.com')
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'decor@ted.com')
+        self.assertEqual(len(invoker.queue), 0)
+    
+    def test_decorator_no_args(self):
+        invoker = user_command_no_args.invoker
+        
+        user_command_no_args(self.dummy, 'no@args.com')
+        self.assertEqual(len(invoker.queue), 1)
+        
+        # the user's email address hasn't changed yet
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'user@example.com')
+
+        # dequeue
+        invoker.dequeue()
+
+        # make sure that the command was executed
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'no@args.com')
         self.assertEqual(len(invoker.queue), 0)
 
     def test_stack(self):
@@ -110,7 +136,7 @@ class SimpleTest(TestCase):
         invoker.enqueue(command)
         invoker.dequeue()
 
-        dummy = User.objects.get(pk=self.dummy.pk)
+        dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'modified_once@none.com')
 
         command.set_data((self.dummy, dummy.email, 'modified_twice@none.com'))
@@ -118,17 +144,17 @@ class SimpleTest(TestCase):
         invoker.enqueue(command)
         invoker.dequeue()
 
-        dummy = User.objects.get(pk=self.dummy.pk)
+        dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'modified_twice@none.com')
 
         invoker.undo()
         
-        dummy = User.objects.get(pk=self.dummy.pk)
+        dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'modified_once@none.com')
 
         invoker.undo()
         
-        dummy = User.objects.get(pk=self.dummy.pk)
+        dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'user@example.com')
 
         self.assertRaises(QueueException, invoker.undo)

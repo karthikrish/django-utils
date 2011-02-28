@@ -5,8 +5,9 @@ except ImportError:
     import pickle
 
 from django.conf import settings
+from django.utils.functional import wraps
 
-from djutils.utils.helpers import load_class
+from djutils.utils.helpers import load_class, generic_autodiscover
 
 
 if hasattr(settings, 'QUEUE_NAME'):
@@ -21,6 +22,8 @@ class QueueException(Exception):
 # dynamically load up a default Queue class
 Queue = load_class(getattr(settings, 'QUEUE_CLASS', 'djutils.queue_backends.DatabaseQueue'))
 
+def autodiscover():
+    return generic_autodiscover('commands')
 
 class Invoker(object):
     _registry = {}
@@ -139,22 +142,39 @@ class QueueCommand(object):
         raise NotImplementedError()
 
 
-def queue_command(func):
-    def create_command():
-        def execute(self):
-            args, kwargs = self.data
-            return func(*args, **kwargs)
+def queue_command(func_or_queue_class=None, queue_name=QUEUE_NAME):
+    if callable(func_or_queue_class):
+        queue_class = Queue
+    else:
+        queue_class = func_or_queue_class or Queue
+    
+    def decorator(func):
+        def create_command():
+            def execute(self):
+                args, kwargs = self.data
+                return func(*args, **kwargs)
+            
+            klass = type(
+                '%s.%s' % (func.__module__, func.__name__),
+                (QueueCommand,),
+                {'execute': execute,
+                 '__module__': func.__module__,
+                 '__doc__': func.__doc__}
+            )
+            
+            return klass
         
-        klass = type(
-            '%s.%s' % (func.__module__, func.__name__),
-            (QueueCommand,),
-            {'execute': execute,
-             '__module__': func.__module__,
-             '__doc__': func.__doc__})
+        klass = create_command()
+        invoker = Invoker(queue_class, queue_name)
         
-        return klass
-    klass = create_command()
-    def inner_run(*args, **kwargs):
-        invoker = Invoker()
-        invoker.enqueue(klass((args, kwargs)))
-    return inner_run
+        func.invoker = invoker
+        
+        @wraps(func)
+        def inner_run(*args, **kwargs):
+            invoker.enqueue(klass((args, kwargs)))
+        return inner_run
+    
+    if callable(func_or_queue_class):
+        return decorator(func_or_queue_class)
+    
+    return decorator
