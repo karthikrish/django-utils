@@ -64,16 +64,7 @@ class Invoker(object):
             'DATA': pickle.dumps(command.get_data())
         }
 
-    def enqueue(self, command):
-        """Enqueue a command for processing"""
-        msg = self.get_message_for_command(command)
-        self.write(msg)
-
-    def read(self):
-        """Read from the queue, returning None if empty"""
-        return self.queue.read()
-
-    def load(self, msg):
+    def get_command_for_message(self, msg):
         """Convert a message to a command"""
         # parse out the pieces from the enqueued message
         klass_str, data = msg.split(':', 1)
@@ -84,11 +75,20 @@ class Invoker(object):
         
         return klass(pickle.loads(str(data)))
 
+    def enqueue(self, command):
+        """Enqueue a command for processing"""
+        msg = self.get_message_for_command(command)
+        self.write(msg)
+
+    def read(self):
+        """Read from the queue, returning None if empty"""
+        return self.queue.read()
+
     def dequeue(self):
         """Dequeue a message, convert to a command and execute all at once"""
         msg = self.read()
         if msg:
-            command = self.load(msg)
+            command = self.get_command_for_message(msg)
             command.execute()
             self._stack.append(msg)
             if len(self._stack) > self.stack_size:
@@ -99,7 +99,7 @@ class Invoker(object):
     def undo(self):
         try:
             last_message = self._stack.pop()
-            command = self.load(last_message)
+            command = self.get_command_for_message(last_message)
             command.undo()
         except IndexError:
             raise QueueException, 'No command found'
