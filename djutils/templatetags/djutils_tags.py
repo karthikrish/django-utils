@@ -115,6 +115,23 @@ def call_manager(model_or_obj, method):
     return getattr(manager, method)()
 
 @register.filter
+def tumble(models_and_dates, limit=5):
+    models_and_dates = models_and_dates.split(',')
+    
+    tumble = []
+    
+    for model_date in models_and_dates:
+        model, date_field = model_date.split(':')
+        queryset = _model_to_queryset(model)[:limit]
+        
+        for obj in queryset:
+            tumble.append((getattr(obj, date_field), obj))
+    
+    tumble.sort(reverse=True)
+    
+    return [r[1] for r in tumble]
+
+@register.filter
 def syntax_highlight(text):
     """
     Automatically syntax-highlight text between
@@ -140,3 +157,10 @@ def gravatar(email, size=80):
         'gravatar_id': md5_constructor(email).hexdigest(),
         'size': str(size)
     })
+
+@register.filter
+def as_template(obj, template=None):
+    if not template:
+        template = 'includes/%s.html' % str(obj._meta)
+    
+    return mark_safe(render_to_string(template, {'object': obj}))
