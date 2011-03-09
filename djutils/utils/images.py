@@ -1,7 +1,7 @@
 import Image
 
 
-def image_resize(source_file, target_filename, new_width, new_height=None):
+def resize(source_file, target_filename, new_width, new_height=None):
     img = Image.open(source_file)
     w, h = img.size
     if img.size[0] < new_width:
@@ -26,7 +26,7 @@ def image_resize(source_file, target_filename, new_width, new_height=None):
         img.save(target_filename or source_file)
     return w, h
 
-def image_crop(source_file, target_filename, x, y, w, h):
+def crop(source_file, target_filename, x, y, w, h):
     img = Image.open(source_file)
     box = (x, y, w+x, h+y)
     img = img.crop(box)
