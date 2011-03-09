@@ -12,6 +12,7 @@ STATUS_CHOICES = (
     (DELETED_STATUS, 'Deleted'),
 )
 
+SYNTAX_HIGHLIGHT_RE = re.compile('(\<pre\>)?\<code\s*(class=\"(.+?)\")?\>(.+?)\<\/code\>(\<\/pre\>)?', re.DOTALL)
 
 # Stop Words courtesy of http://www.dcs.gla.ac.uk/idom/ir_resources/linguistic_utils/stop_words
 STOP_WORDS = r"""\b(a|about|above|across|after|afterwards|again|against|all|almost|alone|along|already|also|
