@@ -1,3 +1,6 @@
+from djutils.constants import STOP_WORDS_RE
+
+
 def split_words_at(words, split_at, after=True):
     """
     Split the words string at a certain number of characters:
@@ -23,3 +26,6 @@ def split_words_at(words, split_at, after=True):
             return tmp[:pos]
         else:
             return tmp[:split_at]
+
+def clean_stop_words(text):
+    return STOP_WORDS_RE.sub('', text).strip()
