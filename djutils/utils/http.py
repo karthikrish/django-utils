@@ -13,7 +13,7 @@ def fetch_url(url, parameters=None, http_method="GET", follow_redirects=True,
     sock.follow_redirects = follow_redirects
     
     request_headers = {'User-Agent': user_agent}
-
+    
     try:
         if http_method not in ('GET', 'HEAD'):
             request_headers['Content-type'] = 'application/x-www-form-urlencoded'
@@ -33,8 +33,8 @@ def fetch_url(url, parameters=None, http_method="GET", follow_redirects=True,
     except socket.timeout:
         raise ValueError('Socket timed out')
     
-    if response['status'] != 200:
-        raise ValueError('Returned status: %s' % (response['status']))
+    if headers['status'] not in ('200', 200):
+        raise ValueError('Returned status: %s' % (headers['status']))
     
     return response
 
