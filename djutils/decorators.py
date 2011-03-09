@@ -5,8 +5,8 @@ import time
 import threading
 
 from django.conf import settings
+from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponseRedirect
-from django.utils.cache import cache
 from django.utils.functional import wraps
 
 
