@@ -1,9 +1,11 @@
 import re
+import urllib
 
 from django import template
 from django.db.models.loading import get_model
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
+from django.utils.hashcompat import md5_constructor
 from django.utils.safestring import mark_safe
 
 from djutils.constants import SYNTAX_HIGHLIGHT_RE
@@ -131,3 +133,10 @@ def syntax_highlight_callback(match_object):
     data = match_object.group(4)
     data = data.replace('&gt;', '>').replace('&lt;', '<').replace('&amp;', '&')
     return highlight(data)
+
+@register.filter
+def gravatar(email, size=80):
+    return 'http://www.gravatar.com/avatar.php?%s' % urllib.urlencode({
+        'gravatar_id': md5_constructor(email).hexdigest(),
+        'size': str(size)
+    })
