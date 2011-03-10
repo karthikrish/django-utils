@@ -122,7 +122,7 @@ def tumble(models_and_dates, limit=5):
     
     for model_date in models_and_dates:
         model, date_field = model_date.split(':')
-        queryset = _model_to_queryset(model)[:limit]
+        queryset = _model_to_queryset(model).order_by('-%s' % date_field)[:limit]
         
         for obj in queryset:
             tumble.append((getattr(obj, date_field), obj))

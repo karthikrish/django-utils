@@ -5,9 +5,6 @@ from django.test import Client, TestCase as _TestCase
 
 
 # Adapted from Simon Willison's snippet: http://djangosnippets.org/snippets/963/.
-
-# This is in trunk right now, so we can kill it once we upgrade
-# http://code.djangoproject.com/changeset/14191
 class RequestFactory(Client):
     """
     Class that lets you create mock Request objects for use in testing.

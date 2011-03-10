@@ -133,6 +133,15 @@ class StatusFieldTestCase(TestCase):
         self.assertEqual(saved.status, constants.LIVE_STATUS)
 
 
+class PublishedManagerTestCase(TestCase):
+    def test_published_mgr(self):
+        live_obj = StatusModel.objects.create(status=constants.LIVE_STATUS)
+        draft_obj = StatusModel.objects.create(status=constants.DRAFT_STATUS)
+        deleted_obj = StatusModel.objects.create(status=constants.DELETED_STATUS)
+        
+        self.assertQuerysetEqual(StatusModel.objects.published(), [live_obj])
+
+
 class DBUtilsTestCase(TestCase):
     def test_get_queryset_position(self):
         for i in xrange(100):

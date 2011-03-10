@@ -1,10 +1,17 @@
 from django.db import models
 
 from djutils.db.fields import SmartSlugField, StatusField
+from djutils.db.managers import PublishedManager
 
 
 class Simple(models.Model):
     slug = SmartSlugField(max_length=5)
+    
+    class FakeTagManager(object):
+        def most_common(self):
+            return ['apple', 'orange']
+    
+    tags = FakeTagManager()
 
 
 class Complex(models.Model):
@@ -24,3 +31,26 @@ class UnderscoresNumerals(models.Model):
 
 class StatusModel(models.Model):
     status = StatusField()
+    
+    objects = PublishedManager('status')
+
+
+class BaseNote(models.Model):
+    message = models.CharField(max_length=255)
+    pub_date = models.DateTimeField(auto_now_add=True)
+    status = StatusField()
+    
+    objects = PublishedManager()
+    
+    class Meta:
+        abstract = True
+
+
+class Note1(BaseNote):
+    pass
+
+class Note2(BaseNote):
+    pass
+
+class Note3(BaseNote):
+    pass

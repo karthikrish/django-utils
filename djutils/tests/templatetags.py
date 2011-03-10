@@ -1,11 +1,14 @@
 from django import forms
 from django.forms.formsets import formset_factory
 
+from djutils import constants
 from djutils.templatetags.djutils_tags import (
     formset_empty_row, formset_add_row, formset_forms, formset_header_row,
-    dynamic_formset,
+    dynamic_formset, popular_tags, latest, alpha, call_manager, tumble,
+    as_template, 
 )
 from djutils.test import TestCase
+from djutils.tests.models import Note1, Note2, Note3
 
 
 class TestForm(forms.Form):
@@ -117,3 +120,66 @@ class DjangoUtilsTemplateTagTestCase(TestCase):
             '</tr>',
             ''
         ])
+    
+    def test_popular_tags(self):
+        result = popular_tags('tests.simple')
+        self.assertEqual(result, ['apple', 'orange'])
+
+        result = popular_tags('tests.simple', 1)
+        self.assertEqual(result, ['apple'])
+    
+    def create_notes(self):
+        for i, Note in enumerate([Note1, Note2, Note3]):
+            note_class = i + 1
+            for j in range(5):
+                Note.objects.create(status=constants.LIVE_STATUS, message='live%d-%d' % (note_class, j+1))
+                Note.objects.create(status=constants.DRAFT_STATUS, message='draft%d-%d' % (note_class, j+1))
+    
+    def test_latest(self):
+        self.create_notes()
+        
+        self.assertEqual([x.message for x in latest('tests.note2', 'pub_date')], [
+            'live2-5', 'live2-4', 'live2-3', 'live2-2', 'live2-1', 
+        ])
+        
+        alternate = Note3.objects.filter(status=constants.DRAFT_STATUS)
+        self.assertEqual([x.message for x in latest(alternate, 'pub_date')], [
+            'draft3-5', 'draft3-4', 'draft3-3', 'draft3-2', 'draft3-1', 
+        ])
+    
+    def test_alpha(self):
+        self.create_notes()
+        
+        self.assertEqual([x.message for x in alpha('tests.note2', 'message')], [
+            'live2-1', 'live2-2', 'live2-3', 'live2-4', 'live2-5', 
+        ])
+        
+        alternate = Note3.objects.filter(status=constants.DRAFT_STATUS)
+        self.assertEqual([x.message for x in alpha(alternate, 'message')], [
+            'draft3-1', 'draft3-2', 'draft3-3', 'draft3-4', 'draft3-5', 
+        ])
+    
+    def test_call_manager(self):
+        self.create_notes()
+        
+        self.assertEqual([x.message for x in call_manager('tests.note2', 'published')], [
+            'live2-1', 'live2-2', 'live2-3', 'live2-4', 'live2-5', 
+        ])
+        
+        alternate = Note3.objects.filter(status=constants.DRAFT_STATUS)
+        self.assertEqual([x.message for x in call_manager(alternate, 'all')], [
+            'draft3-1', 'draft3-2', 'draft3-3', 'draft3-4', 'draft3-5', 
+        ])
+    
+    def test_tumble(self):
+        self.create_notes()
+        
+        self.assertEqual([x.message for x in tumble('tests.note1:pub_date,tests.note3:pub_date', 3)], [
+            'live3-5', 'live3-4', 'live3-3', 'live1-5', 'live1-4', 'live1-3'
+        ])
+    
+    def test_as_template(self):
+        note = Note1.objects.create(message='test')
+        
+        rendered = as_template(note, 'tests/test.template.html').strip()
+        self.assertEqual(rendered, str(note.pk))
