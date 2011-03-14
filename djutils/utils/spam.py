@@ -100,6 +100,6 @@ def moderate_comment(sender, comment, request, **kwargs):
     if not comment.id:
         site.check_spam(comment)
 
-
-comment_will_be_posted.connect(moderate_comment, sender=Comment,
-    dispatch_uid='djutils.spam.comments.listeners')
+def attach_comment_listener(func=moderate_comment):
+    comment_will_be_posted.connect(func, sender=Comment,
+        dispatch_uid='djutils.spam.comments.listeners')
