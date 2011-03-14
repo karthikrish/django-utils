@@ -1,4 +1,5 @@
 import os
+import types
 try:
     import cPickle as pickle
 except ImportError:
@@ -143,7 +144,7 @@ class QueueCommand(object):
 
 
 def queue_command(func_or_queue_class=None, queue_name=QUEUE_NAME):
-    if callable(func_or_queue_class):
+    if isinstance(func_or_queue_class, types.FunctionType):
         queue_class = Queue
     else:
         queue_class = func_or_queue_class or Queue
@@ -174,7 +175,7 @@ def queue_command(func_or_queue_class=None, queue_name=QUEUE_NAME):
             invoker.enqueue(klass((args, kwargs)))
         return inner_run
     
-    if callable(func_or_queue_class):
+    if isinstance(func_or_queue_class, types.FunctionType):
         return decorator(func_or_queue_class)
     
     return decorator
