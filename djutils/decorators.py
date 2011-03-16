@@ -10,6 +10,31 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.utils.functional import wraps
 
 
+class EmptyObject(object):
+    pass
+
+def cached_for_model(cache_timeout=300):
+    def decorator(func):
+        def cache_key_for_function(instance):
+            klass = type(instance)._meta.module_name
+            return 'djutils.%s.cached.%s.%s.%s' % (
+                settings.SITE_ID, klass, func.__name__, instance.pk
+            )
+        
+        @wraps(func)
+        def inner(self, *args, **kwargs):
+            key = cache_key_for_function(self)
+            
+            result = cache.get(key, EmptyObject)
+            
+            if result is EmptyObject or settings.DEBUG:
+                result = func(self, *args, **kwargs)
+                cache.set(key, result, cache_timeout)
+            
+            return result
+        return inner
+    return decorator
+
 def throttle(methods_or_func, limit=3, duration=900):
     if callable(methods_or_func):
         methods = ('POST',)
