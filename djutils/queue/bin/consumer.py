@@ -46,26 +46,29 @@ class QueueDaemon(Daemon):
     
     def run(self):
         while True:
-            try:
-                result = invoker.dequeue()
-            except QueueException:
-                # log error
-                result = False
-            except Exception as e:
-                logging.error('exception encountered: %s' % e)
-                raise
+            self.process_message()
+    
+    def process_message(self):
+        try:
+            result = invoker.dequeue()
+        except QueueException:
+            # log error
+            result = False
+        except Exception as e:
+            logging.error('exception encountered: %s' % e)
+            raise
+        
+        if result:
+            self.logger.info('Processed: %s' % result)
+            self.delay = self.default_delay
+        else:
+            if self.delay > self.max_delay:
+                self.delay = self.max_delay
             
-            if result:
-                self.logger.info('Processed: %s' % result)
-                self.delay = self.default_delay
-            else:
-                if self.delay > self.max_delay:
-                    self.delay = self.max_delay
-                
-                self.logger.info('No messages, sleeping for: %s' % self.delay)
-                
-                time.sleep(self.delay)
-                self.delay *= self.backoff_factor
+            self.logger.info('No messages, sleeping for: %s' % self.delay)
+            
+            time.sleep(self.delay)
+            self.delay *= self.backoff_factor
 
 
 if __name__ == '__main__':

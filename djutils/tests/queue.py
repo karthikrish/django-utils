@@ -1,11 +1,19 @@
+import logging
 import time
+import threading
 
 from django.contrib.auth.models import User
 
+from djutils.queue.bin.consumer import QueueDaemon
 from djutils.queue.decorators import queue_command
 from djutils.queue.queue import QueueCommand, QueueException, invoker
 from djutils.queue.registry import registry
 from djutils.test import TestCase
+
+
+class SilentQueueDaemon(QueueDaemon):
+    def get_logger(self):
+        return logging.getLogger('djutils.tests.queue.logger')
 
 
 class UserCommand(QueueCommand):
@@ -63,3 +71,40 @@ class QueueTest(TestCase):
         dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'decor@ted.com')
         self.assertEqual(len(invoker.queue), 0)
+    
+    def test_daemon_run(self):
+        class Options(dict):
+            def __getattr__(self, name):
+                return self[name]
+        
+        daemon = SilentQueueDaemon(Options(
+            pidfile='',
+            logfile='',
+            delay=.1,
+            backoff=2,
+            max_delay=.4,
+        ))
+        
+        start = time.time()
+        daemon.process_message()
+        end = time.time()
+        
+        self.assertTrue(.09 < end - start < .11)
+        
+        start = time.time()
+        daemon.process_message()
+        end = time.time()
+        
+        self.assertTrue(.19 < end - start < .21)
+        
+        user_command(self.dummy, 'decor@ted.com')
+        
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'user@example.com')
+        
+        daemon.process_message()
+        
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'decor@ted.com')
+        
+        self.assertEqual(daemon.delay, .1)
