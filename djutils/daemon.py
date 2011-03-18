@@ -58,7 +58,7 @@ class Daemon(object):
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
-
+        
         # write pidfile
         atexit.register(self.delpid)
         pid = str(os.getpid())
@@ -134,18 +134,14 @@ class Daemon(object):
         while 1:
             time.sleep(100)
     
-    def run_simple(self, argv):
-        if len(argv) == 2:
-            if 'start' == argv[1]:
-                self.start()
-            elif 'stop' == argv[1]:
-                self.stop()
-            elif 'restart' == argv[1]:
-                self.restart()
-            else:
-                print "Unknown command"
-                sys.exit(2)
-            sys.exit(0)
+    def run_simple(self, arg):
+        if 'start' == arg:
+            self.start()
+        elif 'stop' == arg:
+            self.stop()
+        elif 'restart' == arg:
+            self.restart()
         else:
-            print "usage: %s start|stop|restart" % argv[0]
+            print "Unknown command"
             sys.exit(2)
+        sys.exit(0)

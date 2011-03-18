@@ -1,21 +1,5 @@
 from djutils.models import QueueMessage
-
-
-class BaseQueue(object):
-    def __init__(self, name):
-        self.name = name
-    
-    def write(self, data):
-        raise NotImplementedError
-    
-    def read(self):
-        raise NotImplementedError
-    
-    def flush(self):
-        raise NotImplementedError
-    
-    def __len__(self):
-        raise NotImplementedError
+from djutils.queue.backends.base import BaseQueue
 
 
 class DatabaseQueue(BaseQueue):
@@ -39,4 +23,4 @@ class DatabaseQueue(BaseQueue):
         self._get_queryset().delete()
     
     def __len__(self):
-        return len(self._get_queryset())
+        return self._get_queryset().count()
