@@ -38,6 +38,7 @@ class Invoker(object):
         if msg:
             command = registry.get_command_for_message(msg)
             command.execute()
+            return msg
     
     def flush(self):
         self.queue.flush()
