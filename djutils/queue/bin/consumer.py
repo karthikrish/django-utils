@@ -13,6 +13,7 @@ if __name__ == '__main__':
 
 # avoid importing these if the environment variable is not set
 from djutils.daemon import Daemon
+from djutils.queue import autodiscover
 from djutils.queue.queue import invoker, queue_name
 
 
@@ -110,6 +111,9 @@ if __name__ == '__main__':
     if not args:
         print "usage: %s start|stop|restart" % sys.argv[0]
         sys.exit(2)
+    
+    # load up all commands.py modules in the installed apps
+    autodiscover()
     
     daemon = QueueDaemon(options)
     daemon.run_simple(args[0])
