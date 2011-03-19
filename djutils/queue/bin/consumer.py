@@ -75,9 +75,10 @@ class QueueDaemon(Daemon):
             result = invoker.dequeue()
         except QueueException:
             # log error
+            self.logger.warn('queue exception raised', exc_info=1)
             result = False
-        except Exception as e:
-            logging.error('exception encountered, exiting: %s' % e)
+        except:
+            self.logger.error('exception encountered, exiting', exc_info=1)
             raise
         
         if result:
