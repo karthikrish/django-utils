@@ -1,6 +1,5 @@
 import logging
 import time
-import threading
 
 from django.contrib.auth.models import User
 
