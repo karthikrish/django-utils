@@ -2,6 +2,10 @@ import Image
 
 
 def resize(source_file, target_filename, new_width, new_height=None):
+    """
+    Resize an image to the given width/height, if no height is specificed it
+    will be calculated.  Returns the new width and height.
+    """
     img = Image.open(source_file)
     w, h = img.size
     if img.size[0] < new_width:
@@ -27,6 +31,9 @@ def resize(source_file, target_filename, new_width, new_height=None):
     return w, h
 
 def crop(source_file, target_filename, x, y, w, h):
+    """
+    Crop an image
+    """
     img = Image.open(source_file)
     box = (x, y, w+x, h+y)
     img = img.crop(box)

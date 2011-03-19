@@ -18,12 +18,22 @@ class EmptyObject(object):
 
 
 def prep_for_key(obj):
+    "get a string representation of an object for hashing"
     return pickle.dumps(obj)
 
 def key_from_args(*args, **kwargs):
+    "generate a hash of the given args and kwargs"
     return sha_constructor(prep_for_key((args, kwargs))).hexdigest()
 
 def cached_filter(func, timeout=300):
+    """
+    Decorator for creating a cached template filter.  Usage::
+    
+    @register.filter
+    @cached_filter
+    def expensive_filter(value):
+        ... do something expensive
+    """
     @wraps(func)
     def inner(*args, **kwargs):
         if settings.DEBUG:
@@ -46,6 +56,12 @@ def cached_filter(func, timeout=300):
 
 
 class CachedNode(template.Node):
+    """
+    Base class for creating cached template Nodes - implements two methods:
+    
+    get_cache_key(self, context) -> return a unique cache key
+    get_content(self, context) -> what you would normally return in render()
+    """
     cache_timeout = 60
     
     # whether or not to block when cache is populating
@@ -137,6 +153,11 @@ class CachedNode(template.Node):
 
 
 class CachedContextNode(CachedNode):
+    """
+    Rather than rendering a string, add some variables to the template context.
+    
+    get_content(self, context) -> return dictionary of variables to update
+    """
     def render(self, context):
         rendered = super(CachedContextNode, self).render(context)
         if rendered:

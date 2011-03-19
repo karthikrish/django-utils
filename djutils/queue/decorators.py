@@ -4,6 +4,13 @@ from djutils.queue.queue import invoker, QueueCommand
 
 
 def queue_command(func):
+    """
+    Decorator to execute a function out-of-band via the consumer.  Usage::
+    
+    @queue_command
+    def send_email(user, message):
+        ... this code executed when dequeued by the consumer ...
+    """
     def create_command():
         def execute(self):
             args, kwargs = self.data

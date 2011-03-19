@@ -6,13 +6,16 @@ from django.conf import settings
 
 class IgnoreCsrfMiddleware(object):
     """
-    CSRF can EABOD
+    CSRF middleware can EABOD - this cripples it
     """
     def process_request(self, request):
         request.csrf_processing_done = True
 
 
 class SubdomainMiddleware:
+    """
+    Store the subdomain on the request object
+    """
     def process_request(self, request):
         if 'HTTP_HOST' in request.META:
             host = request.META['HTTP_HOST']

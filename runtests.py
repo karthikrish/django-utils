@@ -29,6 +29,7 @@ if not settings.configured:
             'djutils',
             'djutils.tests',
         ],
+        SITE_ID = 1,
         CACHE_BACKEND = 'djutils.tests.cache_backend://',
         TEMPLATE_CONTEXT_PROCESSORS = ('djutils.context_processors.settings',),
         IGNORE_THIS = 'testing',

@@ -2,6 +2,10 @@ from djutils.utils.http import fetch_url
 
 
 class AkismetClient(object):
+    """
+    Client library to talk to Akismet, the spam detection service.
+    """
+    
     def __init__(self, api_key, blog_url):
         self.api_key = api_key
         self.blog_url = blog_url
@@ -16,6 +20,9 @@ class AkismetClient(object):
             return False
 
     def is_spam(self, comment, ip, author='', email=''):
+        """
+        Determine whether the comment is spam, returns True/False
+        """
         try:
             return fetch_url('http://%s.rest.akismet.com/1.1/comment-check' % self.api_key, {
                 'comment_content': comment,

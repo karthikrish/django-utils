@@ -1,15 +1,36 @@
 #!/usr/bin/env python
 import logging
+import os
 import sys
 import time
 from logging.handlers import RotatingFileHandler
 from optparse import OptionParser
 
+if __name__ == '__main__':
+    if not 'DJANGO_SETTINGS_MODULE' in os.environ:
+        print 'DJANGO_SETTINGS_MODULE environment variable not set, exiting'
+        sys.exit(2)
+
+# avoid importing these if the environment variable is not set
 from djutils.daemon import Daemon
 from djutils.queue.queue import invoker, queue_name
 
 
 class QueueDaemon(Daemon):
+    """
+    Queue consumer that runs as a daemon.  Example usage::
+    
+    To start the consumer (note you must export the settings module):
+    
+    # export PYTHONPATH=/path/to/code:$PYTHONPATH
+    # export DJANGO_SETTINGS_MODULE=mysite.settings
+    # python consumer.py start
+    
+    To stop the consumer:
+    
+    # python consumer.py stop
+    """
+    
     def __init__(self, options, *args, **kwargs):
         self.queue_name = queue_name
         
@@ -55,7 +76,7 @@ class QueueDaemon(Daemon):
             # log error
             result = False
         except Exception as e:
-            logging.error('exception encountered: %s' % e)
+            logging.error('exception encountered, exiting: %s' % e)
             raise
         
         if result:
@@ -71,7 +92,7 @@ class QueueDaemon(Daemon):
             self.delay *= self.backoff_factor
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     parser = OptionParser(usage='%prog [options]')
     parser.add_option('--delay', '-d', dest='delay', default=0.1,
         help='Default interval between invoking, in seconds - default = 0.1')

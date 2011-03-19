@@ -3,6 +3,11 @@ from djutils.queue.backends.base import BaseQueue
 
 
 class DatabaseQueue(BaseQueue):
+    """
+    A simple Queue that uses the database for persistence, good for basic
+    use-cases such as sending emails
+    """
+    
     def _get_queryset(self):
         return QueueMessage.objects.filter(queue=self.name)
     

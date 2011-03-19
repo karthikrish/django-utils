@@ -3,10 +3,12 @@ import time
 import threading
 
 from django.core.cache import cache
+from django.db import models
 from django.http import HttpResponseForbidden
 
-from djutils.decorators import async, memoize, throttle
+from djutils.decorators import async, memoize, throttle, cached_for_model
 from djutils.test import RequestFactoryTestCase, TestCase
+from djutils.tests.models import Simple
 
 
 class ThrottleDecoratorTestCase(RequestFactoryTestCase):
@@ -90,3 +92,19 @@ class MemoizeTestCase(TestCase):
         
         self.assertEqual(test_func('test'), 'from cache')
         self.assertEqual(test_func('Test'), 'Test')
+
+
+class CachedForModelTestCase(TestCase):
+    def setUp(self):
+        cache._cache = {}
+    
+    def test_cached_for_model_decorator(self):
+        instance = Simple.objects.create(slug='test')
+        
+        self.assertEqual(instance.get_cached_data('some arg'), 'test')
+        
+        instance.slug = 'new'
+        
+        self.assertEqual(instance.get_cached_data('some arg'), 'test')
+        self.assertEqual(instance.get_cached_data('another arg'), 'new')
+        self.assertEqual(instance.get_cached_data('some arg'), 'test')

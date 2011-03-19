@@ -9,21 +9,37 @@ from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.utils.functional import wraps
 
+from djutils.cache import key_from_args
+
 
 class EmptyObject(object):
     pass
 
 def cached_for_model(cache_timeout=300):
+    """
+    Model method decorator that caches the return value for the given time.
+    
+    Usage::
+    
+        class MyModel(models.Model):
+            ...
+            
+            @cached_for_model(60)
+            def get_expensive_data(self, some_arg):
+                # do expensive calculations here
+                return data
+    """
     def decorator(func):
-        def cache_key_for_function(instance):
+        def cache_key_for_function(instance, *args, **kwargs):
             klass = type(instance)._meta.module_name
-            return 'djutils.%s.cached.%s.%s.%s' % (
-                settings.SITE_ID, klass, func.__name__, instance.pk
+            hashed = key_from_args((args, kwargs))
+            return 'djutils.%s.cached.%s.%s.%s.%s' % (
+                settings.SITE_ID, klass, func.__name__, instance.pk, hashed
             )
         
         @wraps(func)
         def inner(self, *args, **kwargs):
-            key = cache_key_for_function(self)
+            key = cache_key_for_function(self, *args, **kwargs)
             
             result = cache.get(key, EmptyObject)
             
@@ -36,6 +52,24 @@ def cached_for_model(cache_timeout=300):
     return decorator
 
 def throttle(methods_or_func, limit=3, duration=900):
+    """
+    Throttle the given function, returning 403s if limit exceeded
+    
+    Example::
+    
+        # limit to 5 POST or PUT requests per 5 minutes:
+        
+        @throttle(['POST', 'PUT'], 5, 300)
+        def my_view(request, ...):
+            # do some stuff
+    
+    
+        # limit to 3 POST requests per 15 minutes:
+    
+        @throttle
+        def my_other_view(request, ...):
+            # ..self.
+    """
     if callable(methods_or_func):
         methods = ('POST',)
     else:
@@ -88,6 +122,9 @@ def worker_thread():
             queue.task_done()
 
 def async(func):
+    """
+    Execute the function asynchronously in a separate thread
+    """
     @wraps(func)
     def inner(*args, **kwargs):
         queue.put((func, args, kwargs))

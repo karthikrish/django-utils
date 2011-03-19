@@ -13,7 +13,11 @@ Comment = get_comment_model()
 
 
 class SpamProvider(object):
+    """
+    Base implementation for checking Spam -- subclass this and override
+    """
     def get_comment(self, obj):
+        """Return the comment text to check for spam"""
         raise NotImplementedError
     
     def get_author(self, obj):
@@ -26,13 +30,18 @@ class SpamProvider(object):
         raise NotImplementedError
     
     def should_check(self, obj):
+        """If returns True, the object will be sent to Akismet for checking"""
         return True
     
     def is_spam(self, obj):
+        """If the object is spam, do something (mark as removed, delete, etc)"""
         raise NotImplementedError
 
 
 class CommentProvider(SpamProvider):
+    """
+    Sample implementation for checking Comments for spam
+    """
     def get_comment(self, obj):
         return obj.comment
     
@@ -54,6 +63,10 @@ class CommentProvider(SpamProvider):
 
 
 class SpamFilterSite(object):
+    """
+    Typical Registry-type interface for checking whether particular objects
+    are spam.
+    """
     _registry = {} # watch out
     
     def __init__(self, api_key=AKISMET_KEY, blog_url=AKISMET_URL):

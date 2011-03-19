@@ -9,6 +9,9 @@ from django.utils import simplejson
 
 def fetch_url(url, parameters=None, http_method="GET", follow_redirects=True,
               timeout=4, user_agent='python-httplib2'):
+    """
+    Fetch data at the given URL
+    """
     sock = httplib2.Http(timeout=timeout)
     sock.follow_redirects = follow_redirects
     
@@ -39,6 +42,9 @@ def fetch_url(url, parameters=None, http_method="GET", follow_redirects=True,
     return response
 
 def json_response(context_dictionary):
+    """
+    Convert a python dictionary in a JSON HttpResponse
+    """
     payload = simplejson.dumps(context_dictionary)
     mimetype = settings.DEBUG and 'text/javascript' or 'application/json'
     return HttpResponse(payload, mimetype=mimetype)

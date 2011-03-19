@@ -20,6 +20,12 @@ def get_queue_name():
 
 
 class Invoker(object):
+    """
+    The :class:`Invoker` is responsible for reading and writing to the queue
+    and executing messages.  It talks to the :class:`CommandRegistry` to load
+    up the proper :class:`QueueCommand` for each message
+    """
+    
     def __init__(self, queue):
         self.queue = queue
     
@@ -47,12 +53,35 @@ class Invoker(object):
 class QueueCommandMetaClass(type):
     def __init__(cls, name, bases, attrs):
         """
-        Register all command classes
+        Metaclass to ensure that all command classes are registered
         """
         registry.register(cls)
 
 
 class QueueCommand(object):
+    """
+    A class that encapsulates the logic necessary to 'do something' given some
+    arbitrary data.  When enqueued with the :class:`Invoker`, it will be
+    stored in a queue for out-of-band execution via the consumer.  See also
+    the :func:`queue_command` decorator, which can be used to automatically
+    execute any function out-of-band.
+    
+    Example::
+    
+    class SendEmailCommand(QueueCommand):
+        def execute(self):
+            data = self.get_data()
+            send_email(data['recipient'], data['subject'], data['body'])
+    
+    invoker.enqueue(
+        SendEmailCommand({
+            'recipient': 'somebody@spam.com',
+            'subject': 'look at this awesome website',
+            'body': 'http://youtube.com'
+        })
+    )
+    """
+    
     __metaclass__ = QueueCommandMetaClass
     
     def __init__(self, data=None):

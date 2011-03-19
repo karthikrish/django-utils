@@ -1,7 +1,6 @@
 import datetime
 
 from djutils import constants
-from djutils.db.utils import get_queryset_position
 from djutils.test import TestCase
 from djutils.tests.models import (
     Simple, Complex, UnderscoresNumerals, StatusModel
@@ -140,19 +139,3 @@ class PublishedManagerTestCase(TestCase):
         deleted_obj = StatusModel.objects.create(status=constants.DELETED_STATUS)
         
         self.assertQuerysetEqual(StatusModel.objects.published(), [live_obj])
-
-
-class DBUtilsTestCase(TestCase):
-    def test_get_queryset_position(self):
-        for i in xrange(100):
-            Simple.objects.create(slug='%s' % (i+1))
-        
-        simple_1 = Simple.objects.get(slug='1')
-        simple_50 = Simple.objects.get(slug='50')
-        simple_100 = Simple.objects.get(slug='100')
-        
-        queryset = Simple.objects.all()
-        
-        self.assertEqual(get_queryset_position(queryset, simple_1), 1)
-        self.assertEqual(get_queryset_position(queryset, simple_50), 50)
-        self.assertEqual(get_queryset_position(queryset, simple_100), 100)

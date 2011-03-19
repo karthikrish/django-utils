@@ -1,5 +1,6 @@
 from django.db import models
 
+from djutils.decorators import async, memoize, throttle, cached_for_model
 from djutils.db.fields import SmartSlugField, StatusField
 from djutils.db.managers import PublishedManager
 
@@ -11,7 +12,14 @@ class Simple(models.Model):
         def most_common(self):
             return ['apple', 'orange']
     
+    class Meta:
+        ordering = ('id',)
+    
     tags = FakeTagManager()
+    
+    @cached_for_model(60)
+    def get_cached_data(self, some_arg):
+        return self.slug
 
 
 class Complex(models.Model):

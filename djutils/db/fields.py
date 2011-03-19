@@ -7,6 +7,10 @@ from djutils import constants
 
 
 class StatusField(models.IntegerField):
+    """
+    Field to store status of model instance, i.e. "LIVE", "DRAFT", "DELETED".
+    Used by the :class:`djutils.db.managers.PublishedManager`
+    """
     def __init__(self, *args, **kwargs):
         defaults = {
             'choices': constants.STATUS_CHOICES,
@@ -25,9 +29,30 @@ class StatusField(models.IntegerField):
 
 
 class SmartSlugField(models.SlugField):
+    """
+    Field that generates unique slugs in the event of collisions, optionally
+    accepting a date-field.
+    
+    Example usage::
+    
+        title = models.CharField(max_length=255)
+        pub_date = models.DateTimeField(auto_now_add=True)
+        slug = SmartSlugField(
+            source_field='title',
+            date_field='pub_date',
+            split_on_words=True
+        )
+    """
     __metaclass__ = models.SubfieldBase
 
     def __init__(self, *args, **kwargs):
+        """
+        :param source_field: optional string field to use as source for the slug, i.e. 'title'
+        :param date_field: optional date field on which to enforce slug unique-ness,
+        :param split_on_words: boolean whether to only break up slug on spaces
+        :param underscores: whether to append underscores to generated slug to
+            enforce unique-ness, if False will append numbers, i.e. slug-1, slug-2
+        """
         self.source_field = kwargs.pop('source_field', None)
         self.date_field = kwargs.pop('date_field', None)
         self.split_on_words = kwargs.pop('split_on_words', False)
