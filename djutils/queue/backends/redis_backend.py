@@ -18,8 +18,10 @@ class RedisQueue(BaseQueue):
             connection = 'localhost:6379:0'
         
         self.queue_name = 'djutils.redis.%s' % re.sub('[^a-z0-9]', '', name)
+        host, port, db = connection.split(':')
+
         self.conn = redis.Redis(
-            *connection.split(':')
+            host=host, port=int(port), db=int(db)
         )
     
     def write(self, data):
