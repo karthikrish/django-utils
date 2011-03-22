@@ -14,6 +14,7 @@ if __name__ == '__main__':
 # avoid importing these if the environment variable is not set
 from djutils.daemon import Daemon
 from djutils.queue import autodiscover
+from djutils.queue.exceptions import QueueException
 from djutils.queue.queue import invoker, queue_name
 
 

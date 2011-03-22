@@ -5,6 +5,8 @@ except ImportError:
 
 from django.conf import settings
 
+from djutils.queue.exceptions import QueueException
+
 
 class CommandRegistry(object):
     """
