@@ -17,7 +17,7 @@ def queue_command(func):
             return func(*args, **kwargs)
         
         klass = type(
-            '%s.%s' % (func.__module__, func.__name__),
+            'queuecmd_%s' % (func.__name__),
             (QueueCommand,),
             {'execute': execute,
              '__module__': func.__module__,
