@@ -19,8 +19,6 @@ For the simple case, you need only write a function, decorate it with the
 of executing immediately and potentially blocking, the function will be
 enqueued and return immediately afterwards.
 
-.. py:module:: djutils.queue.bin.consumer
-
 The :class:`QueueDaemon` consumer will pick it up and execute it in a separate
 process::
 
@@ -75,6 +73,8 @@ To manually discover commands, execute::
 Consuming Messages
 ------------------
 
+.. py:module:: djutils.queue.bin.consumer
+
 The :mod:`djutils.queue.bin.consumer` module contains the daemon that will
 consume your queue.  This is a "proper" linux daemon, and is based on the
 python code found in `this blog post <http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/>`_.
@@ -112,8 +112,9 @@ Backends
 
 .. py:module:: djutils.queue.backends.base
 
-Currently I've only written one backend, the :mod:`djutils.queue.backends.database.DatabaseBackend`
-which stores messages in the db using django's ORM.  I plan on adding additional
+Currently I've only written two backends, the :mod:`djutils.queue.backends.database.DatabaseBackend`
+which stores messages in the db using django's ORM and the `djutils.queue.backends.redis_backend.RedisQueue`
+whish uses `redis <http://redis.io>`_ to store messages.  I plan on adding additional
 backends, but if you'd like to write your own there are just a few methods that
 need to be implemented.
 
