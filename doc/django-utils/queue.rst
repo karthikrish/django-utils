@@ -148,7 +148,7 @@ need to be implemented.
 
     ::
 
-        QUEUE_BACKEND = 'djutils.queue.backends.database.DatabaseQeueue'
+        QUEUE_BACKEND = 'djutils.queue.backends.database.DatabaseQueue'
         QUEUE_CONNECTION = '' # <-- no connection needed as it uses django's ORM
 
 .. py:module:: djutils.queue.backends.redis_backend
