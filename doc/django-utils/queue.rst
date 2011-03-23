@@ -112,7 +112,7 @@ Backends
 
 .. py:module:: djutils.queue.backends.base
 
-Currently I've only written two backends, the :mod:`djutils.queue.backends.database.DatabaseBackend`
+Currently I've only written two backends, the :class:`djutils.queue.backends.database.DatabaseQueue`
 which stores messages in the db using django's ORM and the `djutils.queue.backends.redis_backend.RedisQueue`
 whish uses `redis <http://redis.io>`_ to store messages.  I plan on adding additional
 backends, but if you'd like to write your own there are just a few methods that
@@ -140,3 +140,22 @@ need to be implemented.
         .. py:method:: __len__(self)
         
             Number of items in the queue
+
+
+.. py:module:: djutils.queue.backends.database
+
+.. py:class:: class DatabaseQueue(BaseQueue)
+
+    ::
+
+        QUEUE_BACKEND = 'djutils.queue.backends.database.DatabaseQeueue'
+        QUEUE_CONNECTION = '' # <-- no connection needed as it uses django's ORM
+
+.. py:module:: djutils.queue.backends.redis_backend
+
+.. py:class:: class RedisQueue(BaseQueue)
+
+    ::
+
+        QUEUE_BACKEND = 'djutils.queue.backends.redis_backend.RedisQueue'
+        QUEUE_CONNECTION = '10.0.0.75:6379:0' # host, port, database-number
