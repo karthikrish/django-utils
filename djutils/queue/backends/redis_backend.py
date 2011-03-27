@@ -35,3 +35,13 @@ class RedisQueue(BaseQueue):
     
     def __len__(self):
         return self.conn.llen(self.queue_name)
+
+
+class RedisBlockingQueue(RedisQueue):
+    """
+    Use the blocking right pop, should result in messages getting
+    executed close to immediately by the consumer as opposed to
+    being polled for
+    """
+    def read(self):
+        return self.conn.brpop(self.queue_name)
