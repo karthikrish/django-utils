@@ -2,6 +2,7 @@ class BaseQueue(object):
     """
     Base implementation for a Queue, all backends should subclass
     """
+    blocking = False
     
     def __init__(self, name, connection):
         """

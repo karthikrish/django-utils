@@ -43,5 +43,7 @@ class RedisBlockingQueue(RedisQueue):
     executed close to immediately by the consumer as opposed to
     being polled for
     """
+    blocking = True
+
     def read(self):
         return self.conn.brpop(self.queue_name)
