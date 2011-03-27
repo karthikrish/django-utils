@@ -16,14 +16,29 @@ class CommandRegistry(object):
     """
     
     _registry = {}
+    _periodic_commands = []
     
     message_template = '%(CLASS)s:%(DATA)s'
     
     def register(self, command_class):
-        self._registry[str(command_class)] = command_class
+        klass_str = str(command_class)
+        
+        if klass_str not in self._registry:
+            self._registry[klass_str] = command_class
+            
+            # store an instance in a separate list of periodic commands
+            if hasattr(command_class, 'validate_datetime'):
+                self._periodic_commands.append(command_class())
 
     def unregister(self, command_class):
-        del(self._registry[str(command_class)])
+        klass_str = str(command_class)
+        
+        if klass_str in self._registry:
+            del(self._registry[str(command_class)])
+            
+            for command in self._periodic_commands:
+                if isinstance(command, command_class):
+                    self._periodic_commands.remove(command)
     
     def __contains__(self, command_class):
         return str(command_class) in self._registry
@@ -45,6 +60,9 @@ class CommandRegistry(object):
             raise QueueException, '%s not found in CommandRegistry' % klass_str
         
         return klass(pickle.loads(str(data)))
+    
+    def get_periodic_commands(self):
+        return self._periodic_commands
 
 
 registry = CommandRegistry()

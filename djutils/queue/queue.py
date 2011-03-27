@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from django.conf import settings
@@ -48,6 +49,13 @@ class Invoker(object):
     
     def flush(self):
         self.queue.flush()
+    
+    def enqueue_periodic_commands(self):
+        now = datetime.datetime.now()
+        
+        for command in registry.get_periodic_commands():
+            if command.validate_datetime(now):
+                self.enqueue(command)
 
 
 class QueueCommandMetaClass(type):
@@ -101,7 +109,13 @@ class QueueCommand(object):
 
     def execute(self):
         """Execute any arbitary code here"""
-        raise NotImplementedError()
+        raise NotImplementedError
+
+
+class PeriodicQueueCommand(QueueCommand):
+    def validate_datetime(self, dt):
+        """Validate that the command should execute at the given datetime"""
+        return False
 
 
 # dynamically load up an instance of the Queue class we're using

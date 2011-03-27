@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import logging
 import os
+import signal
 import sys
 import time
+import threading
 from logging.handlers import RotatingFileHandler
 from optparse import OptionParser
 
@@ -67,9 +69,24 @@ class QueueDaemon(Daemon):
         log.addHandler(handler)
         return log
     
+    def start_periodic_command_thread(self):
+        periodic_command_thread = threading.Thread(
+            target=self.enqueue_periodic_commands
+        )
+        periodic_command_thread.daemon = True
+        
+        self.logger.info('Starting periodic command execution thread')
+        periodic_command_thread.start()
+        
+        return periodic_command_thread
+    
     def run(self):
-        while True:
+        t = self.start_periodic_command_thread()
+        
+        while t.is_alive():
             self.process_message()
+        
+        self.logger.error('Periodic command thread died, shutting down')
     
     def process_message(self):
         try:
@@ -93,6 +110,20 @@ class QueueDaemon(Daemon):
             
             time.sleep(self.delay)
             self.delay *= self.backoff_factor
+    
+    def enqueue_periodic_commands(self):
+        while True:
+            start = time.time()
+            self.logger.info('Enqueueing periodic commands')
+            
+            try:
+                invoker.enqueue_periodic_commands()
+            except:
+                self.logger.error('periodic command error, exiting', exc_info=1)
+                raise
+            
+            end = time.time()
+            time.sleep(60 - (end - start))
 
 
 if __name__ == '__main__':    
