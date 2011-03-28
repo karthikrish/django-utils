@@ -83,6 +83,7 @@ class QueueTest(TestCase):
             delay=.1,
             backoff=2,
             max_delay=.4,
+            no_periodic=False,
         ))
         
         start = time.time()

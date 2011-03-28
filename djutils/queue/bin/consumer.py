@@ -50,6 +50,7 @@ class QueueDaemon(Daemon):
         self.default_delay = float(options.delay)
         self.max_delay = float(options.max_delay)
         self.backoff_factor = float(options.backoff)
+        self.periodic_commands = not options.no_periodic
 
         if self.backoff_factor < 1.0:
             raise Exception, 'backoff must be greater than or equal to 1'
@@ -81,12 +82,22 @@ class QueueDaemon(Daemon):
         return periodic_command_thread
     
     def run(self):
+        if self.periodic_commands:
+            self.run_with_periodic_commands()
+        else:
+            self.run_only_queue()
+    
+    def run_with_periodic_commands(self):
         t = self.start_periodic_command_thread()
         
         while t.is_alive():
             self.process_message()
         
         self.logger.error('Periodic command thread died, shutting down')
+    
+    def run_only_queue(self):
+        while 1:
+            self.process_message()
     
     def process_message(self):
         try:
@@ -138,6 +149,8 @@ if __name__ == '__main__':
             help='Destination for pid file')
     parser.add_option('--logfile', '-l', dest='logfile', default='',
             help='Destination for log file')
+    parser.add_option('--no-periodic', '-n', dest='no_periodic', action='store_true',
+            default=False, help='Do not enqueue periodic commands')
     
     (options, args) = parser.parse_args()
     
