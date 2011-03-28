@@ -19,14 +19,11 @@ For the simple case, you need only write a function, decorate it with the
 of executing immediately and potentially blocking, the function will be
 enqueued and return immediately afterwards.
 
-The :class:`QueueDaemon` consumer will pick it up and execute it in a separate
-process::
-
-    ### app/views.py ###
-    from django.http import HttpResponse
+::
+    
+    ### app/commands.py
     
     from djutils.queue.decorators import queue_command
-
 
     @queue_command
     def churn_data(model_instance, some_data, another_value):
@@ -36,6 +33,14 @@ process::
         important_results = model_instance.process_data(some_value, another_value)
         model_instance.propogate_results(important_results)
 
+Here's how you might call your function::
+
+    ### app/views.py ###
+    
+    from django.http import HttpResponse
+    
+    from app.commands import churn_data
+
     def data_processing_view(request, some_val, another_val):
         # assume we load up an object based on some parameter passed in
         # to the view.  also, the view gives us a payload of data.  we
@@ -44,6 +49,9 @@ process::
         churn_data(my_object, request.POST['payload'], another_val)
         return HttpResponse('Churning in background task added to queue')
 
+Whenever the view gets called, the function will be enqueued for execution.
+Meanwhile the :class:`QueueDaemon` consumer will pick it up and execute it in a separate
+process.
 
 When the consumer picks up the message, it will churn your data!
 
@@ -53,6 +61,89 @@ When the consumer picks up the message, it will churn your data!
     to ensure that this happens it is good practice to put all :func:`queue_command`
     decorated functions in a module named :mod:`commands.py` so the autodiscovery
     bits will pick them up.
+
+
+Executing tasks on a schedule
+-----------------------------
+
+Sometimes it may be necessary to run a certain bit of code every so often,
+irrespective of some triggering event.  If you've used the linux crontab before,
+then you're already familiar with the idea.
+
+djutils provides two functions to help write periodic commands::
+
+    from djutils.queue.decorators import periodic_command, crontab
+    
+    @periodic_command(crontab(hour='0', minute='0'))
+    def send_daily_digest():
+        # send out a daily email at midnight
+    
+    @periodic_command(crontab(day_of_week='0', hour='5,17', minute='0'))
+    def send_sunday_editions():
+        # send out an email every sunday, once at 5am, once at 5pm
+
+Remember to put any periodic commands you write in a file named **commands.py**
+to ensure that they're picked up by the consumer.
+
+.. warning:: functions decorated with @periodic_command should not accept
+    any parameters
+
+.. note:: Tasks can be run with a minimum resolution of 1 minute.
+
+.. note:: The :func:`periodic_command` decorator is a bit different than the :func:`queue_command`
+    decorator.  Rather than causing the function be enqueued upon execution, it will
+    execute normally and not be enqueued.  The purpose of the decorator is to
+    create a :class:`PeriodicQueueCommand` and register it with the global invoker.  The
+    invoker then handles running any :class:`PeriodicQueueCommand` instances according
+    to schedule.
+
+.. py:function:: queue_command(func)
+
+    function decorator that causes the decorated function to be enqueued for
+    execution when called
+    
+    Usage::
+    
+        from djutils.queue.decorators import queue_command
+        
+        @queue_command
+        def run_this_out_of_process(some_val, another_val)
+            # whenever called, will be run by the consumer instead of in-process
+
+.. py:function:: periodic_command(validate_datetime)
+
+    Decorator to execute a function on a specific schedule.  This is a bit
+    different than :func:queue_command in that it does *not* cause items to
+    be enqueued when called, but rather causes a :class:`PeriodicQueueCommand` to be
+    registered with the global invoker.
+    
+    Since the command is called at a given schedule, it cannot be "triggered"
+    by a run-time event.  As such, there should never be any need for 
+    parameters, since nothing can vary between executions.
+    
+    The :param:`validate_datetime` parameter
+    
+    Usage::
+    
+        from djutils.queue.decorators import crontab, periodic_command
+        
+        @periodic_command(crontab(day='1', hour='0', minute='0'))
+        def run_at_first_of_month():
+            # run this function at midnight on the first of the month
+
+
+.. py:function:: crontab(month='*', day='*', day_of_week='*', hour='*', minute='*')
+
+    Convert a "crontab"-style set of parameters into a test function that will
+    return True when the given datetime matches the parameters set forth in
+    the crontab.
+    
+    Acceptable inputs:
+    
+    - \* = every distinct value
+    - \*/n = run every "n" times, i.e. hours='*/4' == 0, 4, 8, 12, 16, 20
+    - m-n = run every time m..n
+    - m,n = run on m and n
 
 
 Autodiscovery
@@ -159,3 +250,9 @@ need to be implemented.
 
         QUEUE_BACKEND = 'djutils.queue.backends.redis_backend.RedisQueue'
         QUEUE_CONNECTION = '10.0.0.75:6379:0' # host, port, database-number
+
+.. py:class:: class RedisBlockingQueue(RedisQueue)
+
+    An experimental queue that uses Redis' blocking right pop operation to
+    pull messages from the queue rather than polling for updates.  Should work
+    identical to RedisQueue in all other regards, including configuration.
