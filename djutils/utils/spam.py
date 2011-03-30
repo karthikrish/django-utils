@@ -59,6 +59,7 @@ class CommentProvider(SpamProvider):
     
     def is_spam(self, obj):
         obj.is_public = False
+        obj.is_removed = True
         obj.save()
 
 
