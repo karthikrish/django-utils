@@ -89,8 +89,8 @@ class QueueTest(TestCase):
 
     def test_basic_processing(self):
         # make sure UserCommand got registered
-        self.assertTrue(str(UserCommand) in registry)
-        self.assertEqual(registry._registry[str(UserCommand)], UserCommand)
+        self.assertTrue('djutils.tests.queue.UserCommand' in registry)
+        self.assertEqual(registry._registry['djutils.tests.queue.UserCommand'], UserCommand)
 
         # create a command
         command = UserCommand((self.dummy, self.dummy.email, 'nobody@example.com'))
@@ -212,8 +212,8 @@ class QueueTest(TestCase):
     
     def test_periodic_command_registration(self):
         # make sure TestPeriodicCommand got registered
-        self.assertTrue(str(TestPeriodicCommand) in registry)
-        self.assertEqual(registry._registry[str(TestPeriodicCommand)], TestPeriodicCommand)
+        self.assertTrue('djutils.tests.queue.TestPeriodicCommand' in registry)
+        self.assertEqual(registry._registry['djutils.tests.queue.TestPeriodicCommand'], TestPeriodicCommand)
 
         # create a command
         command = TestPeriodicCommand()

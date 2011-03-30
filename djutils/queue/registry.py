@@ -19,9 +19,12 @@ class CommandRegistry(object):
     _periodic_commands = []
     
     message_template = '%(CLASS)s:%(DATA)s'
+
+    def command_to_string(self, command):
+        return '%s.%s' % (command.__module__, command.__name__)
     
     def register(self, command_class):
-        klass_str = str(command_class)
+        klass_str = self.command_to_string(command_class)
         
         if klass_str not in self._registry:
             self._registry[klass_str] = command_class
@@ -31,7 +34,7 @@ class CommandRegistry(object):
                 self._periodic_commands.append(command_class())
 
     def unregister(self, command_class):
-        klass_str = str(command_class)
+        klass_str = self.command_to_string(command_class)
         
         if klass_str in self._registry:
             del(self._registry[str(command_class)])
@@ -46,7 +49,7 @@ class CommandRegistry(object):
     def get_message_for_command(self, command):
         """Convert a command object to a message for storage in the queue"""
         return self.message_template % {
-            'CLASS': str(type(command)),
+            'CLASS': self.command_to_string(type(command)),
             'DATA': pickle.dumps(command.get_data())
         }
 
