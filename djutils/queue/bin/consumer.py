@@ -100,8 +100,6 @@ class QueueDaemon(Daemon):
             except:
                 self.logger.error('exception encountered, exiting thread', exc_info=1)
                 self._error.set()
-            
-            self._queue.task_done()
     
     def initialize_threads(self):
         self._queue = Queue.Queue()
