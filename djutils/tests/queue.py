@@ -98,28 +98,35 @@ class QueueTest(TestCase):
             no_periodic=False,
         ))
         
+        # processing when there is no message will sleep
         start = time.time()
         daemon.process_message()
         end = time.time()
         
+        # make sure it slept the initial amount
         self.assertTrue(.09 < end - start < .11)
         
+        # try processing another message -- will delay longer
         start = time.time()
         daemon.process_message()
         end = time.time()
         
         self.assertTrue(.19 < end - start < .21)
         
+        # cause a command to be enqueued
         user_command(self.dummy, 'decor@ted.com')
         
         dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'user@example.com')
         
+        # processing the message will reset the delay to initial state
         daemon.process_message()
         
+        # make sure the command was executed
         dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'decor@ted.com')
         
+        # make sure the delay was reset
         self.assertEqual(daemon.delay, .1)
     
     def test_crontab_month(self):
