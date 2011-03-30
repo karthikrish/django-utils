@@ -29,6 +29,18 @@ def user_command(user, data):
     user.save()
 
 
+class TestPeriodicCommand(PeriodicQueueCommand):
+    def execute(self):
+        User.objects.create_user('thirty', 'thirty', 'thirty')
+    
+    def validate_datetime(self, dt):
+        return crontab(minute='*/30')(dt)
+
+@periodic_command(crontab(minute='*/15'))
+def every_fifteen():
+    User.objects.create_user('fifteen', 'fifteen', 'fifteen')
+
+
 class QueueTest(TestCase):
     def setUp(self):
         self.dummy = User.objects.create_user('username', 'user@example.com', 'password')
@@ -185,3 +197,73 @@ class QueueTest(TestCase):
         
         # fails validation on minute
         self.assertFalse(validate(datetime.datetime(2011, 1, 1, 4, 6)))
+    
+    def test_registry_get_periodic_commands(self):
+        # three, one for the base class, one for the TestPeriodicCommand, and
+        # one for the decorated function
+        self.assertEqual(len(registry.get_periodic_commands()), 3)
+    
+    def test_periodic_command_registration(self):
+        # make sure TestPeriodicCommand got registered
+        self.assertTrue(str(TestPeriodicCommand) in registry)
+        self.assertEqual(registry._registry[str(TestPeriodicCommand)], TestPeriodicCommand)
+
+        # create a command
+        command = TestPeriodicCommand()
+
+        # enqueueing the command won't execute it - it just hangs out
+        invoker.enqueue(command)
+        
+        # check that there are no users in the db
+        self.assertEqual(User.objects.all().count(), 1)
+
+        # did the message get enqueued?
+        self.assertEqual(len(invoker.queue), 1)
+
+        # dequeueing loads from the queue, creates a command and executes it
+        invoker.dequeue()
+        
+        # a new user should have been added
+        self.assertEqual(User.objects.all().count(), 2)
+    
+    def test_periodic_command_enqueueing(self):
+        on_time = datetime.datetime(2011, 1, 1, 1, 15) # matches */15
+        off_time = datetime.datetime(2011, 1, 1, 1, 16) # doesn't match */15
+        both_time = datetime.datetime(2011, 1, 1, 1, 30)
+        
+        # there should be nothing in the queue
+        self.assertEqual(len(invoker.queue), 0)
+        
+        # no commands should be enqueued
+        invoker.enqueue_periodic_commands(off_time)
+        
+        self.assertEqual(len(invoker.queue), 0)
+        
+        # running it at 1:15 will pick up the */15 command
+        invoker.enqueue_periodic_commands(on_time)
+        
+        self.assertEqual(len(invoker.queue), 1)
+        
+        # dequeue and execute, should get a new user named 'fifteen'
+        invoker.dequeue()
+        
+        # verify user created, then delete the user
+        self.assertEqual(User.objects.filter(username='fifteen').count(), 1)
+        User.objects.all().delete()
+        
+        # make sure the queue is empty
+        self.assertEqual(len(invoker.queue), 0)
+        
+        # running it at :30 will pick up both the */15 and the */30 commands
+        invoker.enqueue_periodic_commands(both_time)
+        
+        self.assertEqual(len(invoker.queue), 2)
+        
+        # execute both commands
+        invoker.dequeue()
+        invoker.dequeue()
+        
+        # check that the users were created
+        self.assertEqual(User.objects.all().count(), 2)
+        self.assertEqual(User.objects.filter(username='fifteen').count(), 1)
+        self.assertEqual(User.objects.filter(username='thirty').count(), 1)

@@ -50,11 +50,11 @@ class Invoker(object):
     def flush(self):
         self.queue.flush()
     
-    def enqueue_periodic_commands(self):
-        now = datetime.datetime.now()
+    def enqueue_periodic_commands(self, dt=None):
+        dt = dt or datetime.datetime.now()
         
         for command in registry.get_periodic_commands():
-            if command.validate_datetime(now):
+            if command.validate_datetime(dt):
                 self.enqueue(command)
 
 
