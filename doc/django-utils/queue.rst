@@ -176,7 +176,25 @@ are properly set:
     * PYTHONPATH: a list of directories in which to find python packages
     * DJANGO_SETTINGS_MODULE: the location of the settings file your django project uses
 
-Example assuming you use virtualenv::
+Useful consumer switches
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+"-t" or "--threads"
+    controls how many worker threads to use.  If your tasks are
+    CPU bound you probably won't see much benefit from multiple threads due to
+    the GIL, but if you plan on doing I/O in your tasks multi-threading can give
+    you a big boost!
+
+"-n" or "--no-periodic"
+    turns off the periodic task scheduler.  If you have no
+    periodic tasks feel free to turn this off.  Also, if you plan on running multiple
+    consumers, only one should be enqueueing periodic tasks.
+
+
+Example assuming you use virtualenv
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
 
     # assume your cwd is the root dir of virtualenv
     export DJANGO_SETTINGS_MODULE=mysite.settings
@@ -186,7 +204,10 @@ Example assuming you use virtualenv::
     
     ./bin/python ./src/djutils/djutils/queue/bin/consumer.py stop -l ./logs/queue.log -p ./run/queue.pid
 
-Example running as root::
+Example running as root
+^^^^^^^^^^^^^^^^^^^^^^^
+
+::
 
     sudo su
     export PYTHONPATH=/path/to/site/:/path/to/djutils/:$PYTHONPATH
@@ -210,27 +231,27 @@ backends, but if you'd like to write your own there are just a few methods that
 need to be implemented.
 
 
-    .. py:class:: class BaseQueue(object)
+.. py:class:: class BaseQueue(object)
+
+    .. py:method:: __init__(self, name, connection)
+
+        Initialize the Queue - this happens once when the module is loaded
+
+    .. py:method:: write(self, data)
+
+        Push 'data' onto the queue
     
-        .. py:method:: __init__(self, name, connection)
+    .. py:method:: read(self)
 
-            Initialize the Queue - this happens once when the module is loaded
+        Pop data from the queue.  An empty queue should not raise an Exception!
     
-        .. py:method:: write(self, data)
+    .. py:method:: flush(self)
 
-            Push 'data' onto the queue
-        
-        .. py:method:: read(self)
+        Delete everything from the queue
 
-            Pop data from the queue.  An empty queue should not raise an Exception!
-        
-        .. py:method:: flush(self)
-
-            Delete everything from the queue
+    .. py:method:: __len__(self)
     
-        .. py:method:: __len__(self)
-        
-            Number of items in the queue
+        Number of items in the queue
 
 
 .. py:module:: djutils.queue.backends.database
