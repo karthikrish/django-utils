@@ -239,7 +239,7 @@ need to be implemented.
 
     ::
 
-        QUEUE_BACKEND = 'djutils.queue.backends.database.DatabaseQueue'
+        QUEUE_CLASS = 'djutils.queue.backends.database.DatabaseQueue'
         QUEUE_CONNECTION = '' # <-- no connection needed as it uses django's ORM
 
 .. py:module:: djutils.queue.backends.redis_backend
@@ -248,7 +248,7 @@ need to be implemented.
 
     ::
 
-        QUEUE_BACKEND = 'djutils.queue.backends.redis_backend.RedisQueue'
+        QUEUE_CLASS = 'djutils.queue.backends.redis_backend.RedisQueue'
         QUEUE_CONNECTION = '10.0.0.75:6379:0' # host, port, database-number
 
 .. py:class:: class RedisBlockingQueue(RedisQueue)
