@@ -120,6 +120,10 @@ class QueueDaemon(Daemon):
         self.logger.info('Initializing daemon with options:\npidfile: %s\nlogfile: %s\ndelay: %s\nbackoff: %s\nthreads: %s' % (
             self.pidfile, self.logfile, self.delay, self.backoff_factor, self.threads))
 
+        self.logger.info('Loaded classes:\n%s' % '\n'.join([
+            klass for klass in registry._registry
+        ]))
+
         self.start_workers()
         
         try:
