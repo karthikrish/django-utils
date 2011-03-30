@@ -89,6 +89,7 @@ class QueueDaemon(Daemon):
         """
         while 1:
             message = self._queue.get()
+            self._queue.task_done()
             
             try:
                 command = registry.get_command_for_message(message)
@@ -170,6 +171,7 @@ class QueueDaemon(Daemon):
             self.logger.info('Processing: %s' % message)
             self.delay = self.default_delay
             self._queue.put(message)
+            self._queue.join()
         else:
             if self.delay > self.max_delay:
                 self.delay = self.max_delay
