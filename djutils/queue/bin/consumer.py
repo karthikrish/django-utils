@@ -58,8 +58,6 @@ class QueueDaemon(Daemon):
         self.delay = self.default_delay
         
         self.logger = self.get_logger()
-        self.logger.info('Initializing daemon with options:\npidfile: %s\nlogfile: %s\ndelay: %s\nbackoff: %s' % (
-            self.pidfile, self.logfile, self.delay, self.backoff_factor))
     
     def get_logger(self):
         log = logging.getLogger('djutils.queue.logger')
@@ -81,12 +79,25 @@ class QueueDaemon(Daemon):
         return periodic_command_thread
     
     def run(self):
+        """
+        Entry-point of the daemon -- in what might be a premature optimization,
+        I've chosen to keep the code paths separate depending on whether the
+        periodic command thread is started.
+        """
+        self.logger.info('Initializing daemon with options:\npidfile: %s\nlogfile: %s\ndelay: %s\nbackoff: %s' % (
+            self.pidfile, self.logfile, self.delay, self.backoff_factor))
+        
         if self.periodic_commands:
             self.run_with_periodic_commands()
         else:
             self.run_only_queue()
     
     def run_with_periodic_commands(self):
+        """
+        Pull messages from the queue so long as:
+        - no unhandled exceptions when dequeue-ing and processing messages
+        - no unhandled exceptions while enqueue-ing periodic commands
+        """
         t = self.start_periodic_command_thread()
         
         while t.is_alive():
@@ -95,6 +106,10 @@ class QueueDaemon(Daemon):
         self.logger.error('Periodic command thread died, shutting down')
     
     def run_only_queue(self):
+        """
+        Pull messages from the queue until shut down or an unhandled exception
+        is encountered while dequeue-ing and processing messages
+        """
         while 1:
             self.process_message()
     
@@ -143,13 +158,13 @@ if __name__ == '__main__':
     parser.add_option('--backoff', '-b', dest='backoff', default=1.15,
         help='Backoff factor when no message found - default = 1.15')
     parser.add_option('--max', '-m', dest='max_delay', default=60,
-            help='Maximum time to wait, in seconds - default = 60')
+        help='Maximum time to wait, in seconds - default = 60')
     parser.add_option('--pidfile', '-p', dest='pidfile', default='',
-            help='Destination for pid file')
+        help='Destination for pid file')
     parser.add_option('--logfile', '-l', dest='logfile', default='',
-            help='Destination for log file')
+        help='Destination for log file')
     parser.add_option('--no-periodic', '-n', dest='no_periodic', action='store_true',
-            default=False, help='Do not enqueue periodic commands')
+        default=False, help='Do not enqueue periodic commands')
     
     (options, args) = parser.parse_args()
     
