@@ -34,6 +34,7 @@ if not settings.configured:
         TEMPLATE_CONTEXT_PROCESSORS = ('djutils.context_processors.settings',),
         IGNORE_THIS = 'testing',
         QUEUE_CLASS = 'djutils.queue.backends.database.DatabaseQueue',
+        QUEUE_NAME = 'testqueue',
     )
 
 from django.test.simple import run_tests

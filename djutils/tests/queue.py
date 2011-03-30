@@ -1,7 +1,9 @@
 import datetime
 import logging
+import threading
 import time
 
+from django.conf import settings
 from django.contrib.auth.models import User
 
 from djutils.queue.bin.consumer import QueueDaemon
@@ -11,9 +13,32 @@ from djutils.queue.registry import registry
 from djutils.test import TestCase
 
 
-class SilentQueueDaemon(QueueDaemon):
+class DummyThreadQueue():
+    """A replacement for the stdlib Queue.Queue"""
+    def put(self, message):
+        command = registry.get_command_for_message(message)
+        command.execute()
+
+class TestQueueDaemon(QueueDaemon):
+    """Subclass of the consumer for test purposes"""
+    def start(self):
+        self.run()
+    
+    def stop(self):
+        raise
+    
     def get_logger(self):
         return logging.getLogger('djutils.tests.queue.logger')
+    
+    def initialize_threads(self):
+        self._threads = []
+        self._error = threading.Event()
+        self._queue = DummyThreadQueue()
+
+
+class Options(dict):
+    def __getattr__(self, name):
+        return self[name]
 
 
 class UserCommand(QueueCommand):
@@ -22,11 +47,18 @@ class UserCommand(QueueCommand):
         user.email = new_email
         user.save()
 
-
 @queue_command
 def user_command(user, data):
     user.email = data
     user.save()
+
+
+class BampfException(Exception):
+    pass
+
+@queue_command
+def throw_error():
+    raise BampfException('bampf')
 
 
 class TestPeriodicCommand(PeriodicQueueCommand):
@@ -44,10 +76,18 @@ def every_fifteen():
 class QueueTest(TestCase):
     def setUp(self):
         self.dummy = User.objects.create_user('username', 'user@example.com', 'password')
+        self.consumer_options = Options(
+            pidfile='',
+            logfile='',
+            delay=.1,
+            backoff=2,
+            max_delay=.4,
+            no_periodic=False,
+            threads=2,
+        )
         invoker.flush()
 
     def test_basic_processing(self):
- 
         # make sure UserCommand got registered
         self.assertTrue(str(UserCommand) in registry)
         self.assertEqual(registry._registry[str(UserCommand)], UserCommand)
@@ -84,50 +124,10 @@ class QueueTest(TestCase):
         self.assertEqual(dummy.email, 'decor@ted.com')
         self.assertEqual(len(invoker.queue), 0)
     
-    def test_daemon_run(self):
-        class Options(dict):
-            def __getattr__(self, name):
-                return self[name]
+    def test_error_raised(self):
+        throw_error()
         
-        daemon = SilentQueueDaemon(Options(
-            pidfile='',
-            logfile='',
-            delay=.1,
-            backoff=2,
-            max_delay=.4,
-            no_periodic=False,
-        ))
-        
-        # processing when there is no message will sleep
-        start = time.time()
-        daemon.process_message()
-        end = time.time()
-        
-        # make sure it slept the initial amount
-        self.assertTrue(.09 < end - start < .11)
-        
-        # try processing another message -- will delay longer
-        start = time.time()
-        daemon.process_message()
-        end = time.time()
-        
-        self.assertTrue(.19 < end - start < .21)
-        
-        # cause a command to be enqueued
-        user_command(self.dummy, 'decor@ted.com')
-        
-        dummy = User.objects.get(username='username')
-        self.assertEqual(dummy.email, 'user@example.com')
-        
-        # processing the message will reset the delay to initial state
-        daemon.process_message()
-        
-        # make sure the command was executed
-        dummy = User.objects.get(username='username')
-        self.assertEqual(dummy.email, 'decor@ted.com')
-        
-        # make sure the delay was reset
-        self.assertEqual(daemon.delay, .1)
+        self.assertRaises(BampfException, invoker.dequeue)
     
     def test_crontab_month(self):
         # validates the following months, 1, 4, 7, 8, 9
@@ -274,3 +274,85 @@ class QueueTest(TestCase):
         self.assertEqual(User.objects.all().count(), 2)
         self.assertEqual(User.objects.filter(username='fifteen').count(), 1)
         self.assertEqual(User.objects.filter(username='thirty').count(), 1)
+    
+    def test_daemon_initialization(self):
+        daemon = TestQueueDaemon(self.consumer_options)
+        
+        db_name = 'testqueue'
+        
+        self.assertEqual(daemon.pidfile, '/var/run/djutils-%s.pid' % db_name)
+        self.assertEqual(daemon.logfile, '/var/log/djutils-%s.log' % db_name)
+        self.assertEqual(daemon.delay, 0.1)
+        self.assertEqual(daemon.max_delay, 0.4)
+        self.assertEqual(daemon.backoff_factor, 2)
+        self.assertEqual(daemon.periodic_commands, True)
+        self.assertEqual(daemon.threads, 2)
+        
+        self.consumer_options['pidfile'] = '/var/run/custom.pid'
+        self.consumer_options['logfile'] = '/var/log/custom.log'
+        
+        daemon = TestQueueDaemon(self.consumer_options)
+        self.assertEqual(daemon.pidfile, '/var/run/custom.pid')
+        self.assertEqual(daemon.logfile, '/var/log/custom.log')
+        
+        daemon_factory = lambda options: TestQueueDaemon(options)
+        
+        self.consumer_options['backoff'] = 0.5
+        self.assertRaises(ValueError, daemon_factory, self.consumer_options)
+        
+        self.consumer_options['backoff'] = 2
+        self.consumer_options['threads'] = 0
+        self.assertRaises(ValueError, daemon_factory, self.consumer_options)
+        
+        self.consumer_options['threads'] = 1
+        other_daemon = daemon_factory(self.consumer_options)
+    
+    def test_daemon_delay(self):
+        daemon = TestQueueDaemon(self.consumer_options)
+        
+        # start up some worker threads
+        daemon.initialize_threads()
+        daemon.start_workers()
+        
+        # processing when there is no message will sleep
+        start = time.time()
+        daemon.process_message()
+        end = time.time()
+        
+        # make sure it slept the initial amount
+        self.assertTrue(.09 < end - start < .11)
+        
+        # try processing another message -- will delay longer
+        start = time.time()
+        daemon.process_message()
+        end = time.time()
+        
+        self.assertTrue(.19 < end - start < .21)
+        
+        # cause a command to be enqueued
+        user_command(self.dummy, 'decor@ted.com')
+        
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'user@example.com')
+        
+        # processing the message will reset the delay to initial state
+        daemon.process_message()
+        
+        # make sure the command was executed
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'decor@ted.com')
+        
+        # make sure the delay was reset
+        self.assertEqual(daemon.delay, .1)
+    
+    def test_daemon_multithreading(self):
+        pass
+    
+    def test_daemon_periodic_commands(self):
+        pass
+    
+    def test_daemon_worker_exception(self):
+        pass
+    
+    def test_daemon_periodic_thread_exception(self):
+        pass

@@ -54,10 +54,10 @@ class QueueDaemon(Daemon):
         self.periodic_commands = not options.no_periodic
 
         if self.backoff_factor < 1.0:
-            raise Exception, 'backoff must be greater than or equal to 1'
+            raise ValueError, 'backoff must be greater than or equal to 1'
         
-        if self.threads < 0:
-            raise Exception, 'threads must be at least 1'
+        if self.threads < 1:
+            raise ValueError, 'threads must be at least 1'
          
         # initialize delay
         self.delay = self.default_delay
@@ -99,8 +99,10 @@ class QueueDaemon(Daemon):
             except:
                 self.logger.error('exception encountered, exiting thread', exc_info=1)
                 self._error.set()
-
-    def start_workers(self):
+            
+            self._queue.task_done()
+    
+    def initialize_threads(self):
         self._queue = Queue.Queue()
         self._error = threading.Event()
         self._threads = []
@@ -108,8 +110,10 @@ class QueueDaemon(Daemon):
         for i in range(self.threads):
             thread = threading.Thread(target=self._queue_worker)
             thread.daemon = True
-            thread.start()
             self._threads.append(thread)
+
+    def start_workers(self):
+        [t.start() for t in self._threads]
     
     def run(self):
         """
@@ -120,6 +124,7 @@ class QueueDaemon(Daemon):
         self.logger.info('Initializing daemon with options:\npidfile: %s\nlogfile: %s\ndelay: %s\nbackoff: %s\nthreads: %s' % (
             self.pidfile, self.logfile, self.delay, self.backoff_factor, self.threads))
 
+        self.initialize_threads()
         self.start_workers()
         
         try:

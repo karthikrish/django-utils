@@ -17,7 +17,7 @@ def get_queue_name():
     if hasattr(settings, 'QUEUE_NAME'):
         return settings.QUEUE_NAME
     else:
-        return 'queue-%s' % (os.path.basename(settings.DATABASE_NAME))
+        return 'queue-%s' % (os.path.basename(settings.DATABASES['default']['NAME']))
 
 
 class Invoker(object):
