@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import os
+import Queue
 import sys
 import time
 import threading
@@ -16,7 +17,7 @@ if __name__ == '__main__':
 from djutils.daemon import Daemon
 from djutils.queue import autodiscover
 from djutils.queue.exceptions import QueueException
-from djutils.queue.queue import invoker, queue_name
+from djutils.queue.queue import invoker, queue_name, registry
 
 
 class QueueDaemon(Daemon):
@@ -49,11 +50,15 @@ class QueueDaemon(Daemon):
         self.default_delay = float(options.delay)
         self.max_delay = float(options.max_delay)
         self.backoff_factor = float(options.backoff)
+        self.threads = int(options.threads)
         self.periodic_commands = not options.no_periodic
 
         if self.backoff_factor < 1.0:
             raise Exception, 'backoff must be greater than or equal to 1'
         
+        if self.threads < 0:
+            raise Exception, 'threads must be at least 1'
+         
         # initialize delay
         self.delay = self.default_delay
         
@@ -78,14 +83,42 @@ class QueueDaemon(Daemon):
         
         return periodic_command_thread
     
+    def _queue_worker(self):
+        """
+        A worker thread that will chew on dequeued messages
+        """
+        while 1:
+            message = self._queue.get()
+            
+            try:
+                command = registry.get_command_for_message(message)
+                command.execute()
+            except QueueException:
+                # log error
+                self.logger.warn('queue exception raised', exc_info=1)
+            except:
+                self.logger.error('exception encountered, exiting thread', exc_
+                self._error.set()
+
+    def start_workers(self):
+        self._queue = Queue.Queue()
+        self._error = threading.Event()
+        self._threads = []
+        
+        for i in range(self.threads):
+            thread = threading.Thread(target=self._queue_worker)
+            thread.daemon = True
+            thread.start()
+            self._threads.append(thread)
+    
     def run(self):
         """
         Entry-point of the daemon -- in what might be a premature optimization,
         I've chosen to keep the code paths separate depending on whether the
         periodic command thread is started.
         """
-        self.logger.info('Initializing daemon with options:\npidfile: %s\nlogfile: %s\ndelay: %s\nbackoff: %s' % (
-            self.pidfile, self.logfile, self.delay, self.backoff_factor))
+        self.logger.info('Initializing daemon with options:\npidfile: %s\nlogfile: %s\ndelay: %s\nbackoff: %s\nthreads: %s' % (
+            self.pidfile, self.logfile, self.delay, self.backoff_factor, self.threads))
         
         if self.periodic_commands:
             self.run_with_periodic_commands()
@@ -114,19 +147,14 @@ class QueueDaemon(Daemon):
             self.process_message()
     
     def process_message(self):
-        try:
-            result = invoker.dequeue()
-        except QueueException:
-            # log error
-            self.logger.warn('queue exception raised', exc_info=1)
-            result = False
-        except:
-            self.logger.error('exception encountered, exiting', exc_info=1)
-            raise
+        if self._error.is_set():
+            raise Exception, 'Error raised by worker thread, shutting down'
         
-        if result:
-            self.logger.info('Processed: %s' % result)
-            self.delay = self.default_delay
+        message = invoker.read()
+        
+        if message:
+            self.logger.info('Processing: %s' % message)
+            self._queue.put(message)
         else:
             if self.delay > self.max_delay:
                 self.delay = self.max_delay
@@ -165,6 +193,8 @@ if __name__ == '__main__':
         help='Destination for log file')
     parser.add_option('--no-periodic', '-n', dest='no_periodic', action='store_true',
         default=False, help='Do not enqueue periodic commands')
+    parser.add_option('--threads', '-t', dest='threads', default=1,
+        help='Number of worker threads, default = 1')
     
     (options, args) = parser.parse_args()
     
