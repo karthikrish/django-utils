@@ -97,7 +97,7 @@ class QueueDaemon(Daemon):
                 # log error
                 self.logger.warn('queue exception raised', exc_info=1)
             except:
-                self.logger.error('exception encountered, exiting thread', exc_
+                self.logger.error('exception encountered, exiting thread', exc_info=1)
                 self._error.set()
 
     def start_workers(self):
@@ -119,11 +119,16 @@ class QueueDaemon(Daemon):
         """
         self.logger.info('Initializing daemon with options:\npidfile: %s\nlogfile: %s\ndelay: %s\nbackoff: %s\nthreads: %s' % (
             self.pidfile, self.logfile, self.delay, self.backoff_factor, self.threads))
+
+        self.start_workers()
         
-        if self.periodic_commands:
-            self.run_with_periodic_commands()
-        else:
-            self.run_only_queue()
+        try:
+            if self.periodic_commands:
+                self.run_with_periodic_commands()
+            else:
+                self.run_only_queue()
+        except:
+            self.logger.error('error', exc_info=1)
     
     def run_with_periodic_commands(self):
         """
@@ -154,6 +159,7 @@ class QueueDaemon(Daemon):
         
         if message:
             self.logger.info('Processing: %s' % message)
+            self.delay = self.default_delay
             self._queue.put(message)
         else:
             if self.delay > self.max_delay:
