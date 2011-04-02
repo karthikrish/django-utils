@@ -196,6 +196,8 @@ class QueueDaemon(Daemon):
 
 if __name__ == '__main__':    
     parser = OptionParser(usage='%prog [options]')
+    parser.add_option('--foreground', '-f', dest='foreground', action='store_true',
+        default=False, help='Run in foreground')
     parser.add_option('--delay', '-d', dest='delay', default=0.1,
         help='Default interval between invoking, in seconds - default = 0.1')
     parser.add_option('--backoff', '-b', dest='backoff', default=1.15,
@@ -213,6 +215,9 @@ if __name__ == '__main__':
     
     (options, args) = parser.parse_args()
     
+    if options.foreground:
+        args = ['start']
+    
     if not args:
         print "usage: %s start|stop|restart" % sys.argv[0]
         sys.exit(2)
@@ -221,4 +226,8 @@ if __name__ == '__main__':
     autodiscover()
     
     daemon = QueueDaemon(options)
-    daemon.run_simple(args[0])
+    
+    if not options.foreground:
+        daemon.run_simple(args[0])
+    else:
+        daemon.run()
