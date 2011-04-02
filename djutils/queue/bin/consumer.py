@@ -193,8 +193,7 @@ class QueueDaemon(Daemon):
             end = time.time()
             time.sleep(60 - (end - start))
 
-
-if __name__ == '__main__':    
+def get_parser():
     parser = OptionParser(usage='%prog [options]')
     parser.add_option('--foreground', '-f', dest='foreground', action='store_true',
         default=False, help='Run in foreground')
@@ -212,7 +211,10 @@ if __name__ == '__main__':
         default=False, help='Do not enqueue periodic commands')
     parser.add_option('--threads', '-t', dest='threads', default=1,
         help='Number of worker threads, default = 1')
-    
+    return parser
+
+if __name__ == '__main__':    
+    parser = get_parser()
     (options, args) = parser.parse_args()
     
     if options.foreground:
