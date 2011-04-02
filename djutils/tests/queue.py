@@ -18,6 +18,9 @@ class DummyThreadQueue():
     def put(self, message):
         command = registry.get_command_for_message(message)
         command.execute()
+    
+    def join(self):
+        pass
 
 class TestQueueDaemon(QueueDaemon):
     """Subclass of the consumer for test purposes"""
