@@ -22,3 +22,12 @@ class SubdomainMiddleware:
             split_url = urlparse.urlsplit(host)
             tld_bits = split_url.netloc.rsplit('.', 2)
             request.subdomain = len(tld_bits) == 3 and tld_bits[0] or None
+
+
+class ProxyIPMiddleware(object):
+    """
+    Fix REMOTE_ADDR header when using a proxy
+    """
+    def process_request(self, request):
+        if 'HTTP_X_FORWARDED_FOR' in request.META:
+            request.META['REMOTE_ADDR'] = request.META['HTTP_X_FORWARDED_FOR']
