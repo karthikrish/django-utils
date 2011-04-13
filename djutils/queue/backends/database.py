@@ -1,3 +1,5 @@
+from django.db import close_connection, DatabaseError
+
 from djutils.models import QueueMessage
 from djutils.queue.backends.base import BaseQueue
 
@@ -18,6 +20,9 @@ class DatabaseQueue(BaseQueue):
         try:
             message = self._get_queryset()[0]
         except IndexError:
+            data = None
+        except DatabaseError:
+            close_connection()
             data = None
         else:
             data = message.message
