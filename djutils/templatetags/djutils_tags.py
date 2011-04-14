@@ -1,7 +1,10 @@
+import os
 import re
 import urllib
 
 from django import template
+from django.conf import settings
+from django.contrib.sites.models import Site
 from django.db.models.loading import get_model
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
@@ -9,8 +12,10 @@ from django.utils.hashcompat import md5_constructor
 from django.utils.safestring import mark_safe
 
 from djutils.constants import SYNTAX_HIGHLIGHT_RE
+from djutils.decorators import memoize
 from djutils.db.managers import PublishedManager
 from djutils.utils.highlighter import highlight
+from djutils.utils.images import resize as img_resize
 
 
 register = template.Library()
@@ -253,3 +258,46 @@ def as_template(obj, template=None):
         template = 'includes/%s.html' % str(obj._meta)
     
     return mark_safe(render_to_string(template, {'object': obj}))
+
+@memoize
+def get_media_url_regex():
+    media_url = settings.MEDIA_URL.rstrip('/')
+    return re.compile(r'^%s/([^\s]+\.(jpg|gif|png))' % media_url, re.I)
+
+@register.filter
+def resize(url, width):
+    """
+    Return a url to a resized version of the given image at the url -- only
+    works for files hosted on your MEDIA_ROOT --- CACHE THIS HEAVILY
+    """
+    width = int(width)
+    
+    regex = get_media_url_regex()
+    
+    # check to see if the url is one we can handle, otherwise just return the
+    # full size image
+    url_match = re.match(regex, url)
+    if not url_match:
+        return url
+    
+    # get the path, i.e. media/img/kitties.jpg    
+    image_path = url_match.groups()[0]
+        
+    # create the entire filename as it would be on disk
+    filename = os.path.join(settings.MEDIA_ROOT, image_path.lstrip('/'))
+        
+    # create the entire url as it would be on site, minus the filename
+    base_url, ext = url.rsplit('.', 1)
+                
+    # create the file path on disk minus the extension
+    base_file, ext = filename.rsplit('.', 1)
+    
+    append = '_%s.%s' % (width, ext)
+        
+    new_filename = '%s%s' % (base_file, append)
+    
+    if not os.path.isfile(new_filename):
+        # open the original to calculate its width and height
+        img_resize(filename, new_filename, width)
+        
+    return '%s%s' % (base_url, append)
