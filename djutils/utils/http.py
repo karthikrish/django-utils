@@ -1,9 +1,10 @@
 import httplib2
+import re
 import socket
 from urllib import urlencode
 
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import simplejson
 
 
@@ -48,3 +49,18 @@ def json_response(context_dictionary):
     payload = simplejson.dumps(context_dictionary)
     mimetype = settings.DEBUG and 'text/javascript' or 'application/json'
     return HttpResponse(payload, mimetype=mimetype)
+
+def next_redirect(request, fallback='/'):
+    redirect_to = request.REQUEST.get('next', '')
+    
+    if not redirect_to or ' ' in redirect_to:
+        redirect_to = fallback
+
+    # Heavier security check -- redirects to http://example.com should
+    # not be allowed, but things like /view/?param=http://example.com
+    # should be allowed. This regex checks if there is a '//' *before* a
+    # question mark.
+    elif '//' in redirect_to and re.match(r'[^\?]*//', redirect_to):
+        redirect_to = fallback
+    
+    return HttpResponseRedirect(redirect_to)
