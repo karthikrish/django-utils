@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.comments import get_model as get_comment_model
-from django.contrib.comments.signals import comment_will_be_posted
+from django.contrib.comments.signals import comment_was_posted
 from django.utils.encoding import smart_str
 
 from djutils.utils.akismet import AkismetClient
@@ -111,9 +111,8 @@ site.register(Comment, CommentProvider)
 
 
 def moderate_comment(sender, comment, request, **kwargs):
-    if not comment.id:
-        site.check_spam(comment)
+    site.check_spam(comment)
 
 def attach_comment_listener(func=moderate_comment):
-    comment_will_be_posted.connect(func, sender=Comment,
+    comment_was_posted.connect(func, sender=Comment,
         dispatch_uid='djutils.spam.comments.listeners')
