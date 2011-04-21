@@ -5,6 +5,7 @@ import urllib
 from django import template
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.core.files.storage import default_storage
 from django.db.models.loading import get_model
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
@@ -280,24 +281,21 @@ def resize(url, width):
     if not url_match:
         return url
     
-    # get the path, i.e. media/img/kitties.jpg    
+    # get the path, i.e. images/photos/kitties.jpg    
     image_path = url_match.groups()[0]
-        
-    # create the entire filename as it would be on disk
-    filename = os.path.join(settings.MEDIA_ROOT, image_path.lstrip('/'))
-        
+    
     # create the entire url as it would be on site, minus the filename
     base_url, ext = url.rsplit('.', 1)
                 
-    # create the file path on disk minus the extension
-    base_file, ext = filename.rsplit('.', 1)
+    # create the file path minus the extension
+    base_path, ext = image_path.rsplit('.', 1)
     
     append = '_%s.%s' % (width, ext)
         
-    new_filename = '%s%s' % (base_file, append)
+    new_path = '%s%s' % (base_path, append)
     
-    if not os.path.isfile(new_filename):
+    if not default_storage.exists(new_path):
         # open the original to calculate its width and height
-        img_resize(filename, new_filename, width)
-        
+        img_resize(image_path, new_path, width)
+    
     return '%s%s' % (base_url, append)
