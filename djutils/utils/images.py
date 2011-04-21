@@ -28,7 +28,7 @@ def resize(source, dest, width, height=None):
     
     return img_width, img_height
 
-def _resize(source_img, width, height=None):
+def _resize(img_obj, width, height=None):
     """
     Perform calculations to resize and scale, returning a file-like object and
     the new dimensions
