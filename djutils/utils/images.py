@@ -4,7 +4,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from django.core.files import File
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
 
@@ -24,7 +24,7 @@ def resize(source, dest, width, height=None):
     source_file.close()
     
     # write out the new file
-    default_storage.save(dest, File(img_buffer))
+    default_storage.save(dest, ContentFile(img_buffer.getvalue()))
     
     return img_width, img_height
 
@@ -76,4 +76,4 @@ def crop(source, dest, x, y, w, h):
     img_obj.save(img_buffer, format=format)
     
     source_file.close()
-    default_storage.save(dest, File(img_buffer))
+    default_storage.save(dest, ContentFile(img_buffer.getvalue()))
