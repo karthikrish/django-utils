@@ -23,10 +23,16 @@ def resize(source, dest, width, height=None):
     
     source_file.close()
     
-    # write out the new file
-    default_storage.save(dest, ContentFile(img_buffer.getvalue()))
+    if source == dest:
+        try:
+            default_storage.delete(source)
+        except IOError:
+            pass
     
-    return img_width, img_height
+    # write out the new file
+    dest_name = default_storage.save(dest, ContentFile(img_buffer.getvalue()))
+    
+    return dest_name, img_width, img_height
 
 def _resize(img_obj, width, height=None):
     """
