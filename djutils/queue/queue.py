@@ -34,6 +34,11 @@ class Invoker(object):
         self.queue.write(msg)
     
     def enqueue(self, command):
+        if getattr(settings, 'QUEUE_ALWAYS_EAGER', False):
+            # if the queue is set to always eager, run commands in-process --
+            # useful if you're running DEBUG
+            return command.execute()
+        
         self.write(registry.get_message_for_command(command))
     
     def read(self):

@@ -78,6 +78,9 @@ def every_fifteen():
 
 class QueueTest(TestCase):
     def setUp(self):
+        self.orig_always_eager = getattr(settings, 'QUEUE_ALWAYS_EAGER', False)
+        settings.QUEUE_ALWAYS_EAGER = False
+        
         self.dummy = User.objects.create_user('username', 'user@example.com', 'password')
         self.consumer_options = Options(
             pidfile='',
@@ -89,6 +92,9 @@ class QueueTest(TestCase):
             threads=2,
         )
         invoker.flush()
+    
+    def tearDown(self):
+        settings.QUEUE_ALWAYS_EAGER = True
 
     def test_basic_processing(self):
         # make sure UserCommand got registered
@@ -126,6 +132,16 @@ class QueueTest(TestCase):
         dummy = User.objects.get(username='username')
         self.assertEqual(dummy.email, 'decor@ted.com')
         self.assertEqual(len(invoker.queue), 0)
+    
+    def test_always_eager(self):
+        settings.QUEUE_ALWAYS_EAGER = True
+        
+        user_command(self.dummy, 'decor@ted.com')
+        self.assertEqual(len(invoker.queue), 0)
+
+        # the user's email address was changed
+        dummy = User.objects.get(username='username')
+        self.assertEqual(dummy.email, 'decor@ted.com')
     
     def test_error_raised(self):
         throw_error()
