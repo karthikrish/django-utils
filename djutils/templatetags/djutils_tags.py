@@ -6,7 +6,7 @@ from django import template
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.files.storage import default_storage
-from django.db.models.loading import get_model
+from django.db.models.loading import get_model, get_models
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
 from django.utils.hashcompat import md5_constructor
@@ -299,3 +299,48 @@ def resize(url, width):
         img_resize(image_path, new_path, width)
     
     return '%s%s' % (base_url, append)
+
+
+INLINE_REGEX = re.compile('<inline (?P<attrs>[^>]+)>')
+KV_REGEX = re.compile('(\w+)=[\"\']?([^\"\']+)[\"\']?\s*')
+
+@register.filter
+def parse_inlines(text):
+    """
+    Replace <inline type="photo" id="val" class=""> with an embedded object
+    rendered using the template as inlines/<model>.html
+    """
+    text = re.sub(INLINE_REGEX, inline_callback, text)
+    return mark_safe(text)
+
+def inline_callback(match_object):
+    attrs = match_object.groupdict()['attrs']
+    attr_dict = dict([item.groups() for item in KV_REGEX.finditer(attrs)])
+    
+    inline_type = attr_dict.pop('type')
+    inline_pk = attr_dict.pop('id')
+    
+    if '.' in inline_type:
+        model_class = get_model(*inline_type.split('.'))
+    else:
+        for model in get_models():
+            if model._meta.module_name == inline_type:
+                model_class = model
+                break
+        
+        if not model_class:
+            raise template.TemplateSyntaxError('Could not find model %s' % inline_type)
+    
+    try:
+        obj = model_class._default_manager.get(pk=inline_pk)
+    except model_class.DoesNotExist:
+        raise template.TemplateSyntaxError('Unable to load %s with pk %s' % (inline_type, inline_pk))
+    
+    module_name = model_class._meta.module_name
+    data = {
+        'object': obj,
+        'module_name': module_name,
+        'attrs': attr_dict
+    }
+    
+    return render_to_string('inlines/%s.html' % module_name, data)
