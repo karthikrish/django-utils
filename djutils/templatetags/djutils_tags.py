@@ -4,6 +4,7 @@ import urllib
 
 from django import template
 from django.conf import settings
+from django.contrib.flatpages.models import FlatPage
 from django.contrib.sites.models import Site
 from django.core.files.storage import default_storage
 from django.db.models.loading import get_model, get_models
@@ -344,3 +345,10 @@ def inline_callback(match_object):
     }
     
     return render_to_string('inlines/%s.html' % module_name, data)
+
+@register.filter
+def flatpage_for_url(url):
+    try:
+        return FlatPage.objects.get(url=url)
+    except FlatPage.DoesNotExist:
+        pass
