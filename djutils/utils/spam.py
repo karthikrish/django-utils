@@ -93,17 +93,19 @@ class SpamFilterSite(object):
         provider = self._registry[type(obj)]
         
         if provider.should_check(obj):
-            is_spam = self.client.is_spam(
+            obj_is_spam = self.client.is_spam(
                 smart_str(provider.get_comment(obj)),
                 provider.get_ip(obj),
                 provider.get_author(obj),
                 provider.get_email(obj)
             )
             
-            if is_spam:
+            if obj_is_spam:
                 provider.is_spam(obj)
+        else:
+            obj_is_spam = False
 
-        return is_spam
+        return obj_is_spam
 
 
 site = SpamFilterSite()
