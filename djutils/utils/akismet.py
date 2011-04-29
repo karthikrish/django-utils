@@ -41,12 +41,12 @@ class AkismetClient(object):
     
     def submit_spam(self, comment, ip, author='', email=''):
         try:
-            return self._make_call('submit-spam', comment, ip, author, email) == 'valid'
+            return 'Thanks' in self._make_call('submit-spam', comment, ip, author, email)
         except:
             return False
     
     def submit_ham(self, comment, ip, author='', email=''):
         try:
-            return self._make_call('submit-ham', comment, ip, author, email) == 'valid'
+            return 'Thanks' in self._make_call('submit-ham', comment, ip, author, email)
         except:
             return False

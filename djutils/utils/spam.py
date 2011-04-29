@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib import admin
 from django.contrib.comments import get_model as get_comment_model
 from django.contrib.comments.signals import comment_was_posted
 from django.utils.encoding import smart_str
@@ -140,3 +141,48 @@ def moderate_comment(sender, comment, request, **kwargs):
 def attach_comment_listener(func=moderate_comment):
     comment_was_posted.connect(func, sender=Comment,
         dispatch_uid='djutils.spam.comments.listeners')
+
+
+class SpamFilterAdmin(admin.ModelAdmin):
+    def _submit_akismet(self, func, queryset):
+        failed = []
+        for obj in queryset:
+            if not func(obj):
+                failed.append(obj.pk)
+        return failed
+
+    def submit_spam(self, request, queryset):
+        results = self._submit_akismet(site.submit_spam, queryset)
+        if results:
+            msg = 'Failures with following PKs: %s' % results
+        else:
+            msg = 'Objects submitted as spam'
+        self.message_user(request, msg)
+    submit_spam.short_description = 'Mark objects as spam'
+
+    def submit_ham(self, request, queryset):
+        results = self._submit_akismet(site.submit_ham, queryset)
+        if results:
+            msg = 'Failures with following PKs: %s' % results
+        else:
+            msg = 'Objects submitted as ham'
+        self.message_user(request, msg)
+    submit_ham.short_description = 'Mark objects as ham'
+
+
+def patch_admin(model):
+    if model not in admin.site._registry:
+        raise AttributeError('Unable to patch admin, model %s not found' % model)
+
+    admin_inst = admin.site._registry[model]
+    modeladmin = type(admin_inst)
+
+    actions = modeladmin.actions + ['submit_spam', 'submit_ham']
+
+    dynamic_admin = type(
+        '%sSpamFilterAdmin' % model._meta.object_name,
+        (modeladmin, SpamFilterAdmin),
+        {'actions': actions}
+    )
+    admin.site.unregister(model)
+    admin.site.register(model, dynamic_admin)
