@@ -136,6 +136,3 @@ class ImageUtilsTestCase(TestCase):
         img_buf = StringIO(self.storage._files[self.img_location])
         img = Image.open(img_buf)
         self.assertEqual((400, 300), img.size)
-        
-        # only 1 file
-        self.assertEqual(len(self.storage._files), 1)

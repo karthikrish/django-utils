@@ -86,11 +86,14 @@ class SpamFilterSite(object):
         if model_class in self._registry:
             del(self._registry[model_class])
     
-    def check_spam(self, obj):
+    def provider_for_object(self, obj):
         if not type(obj) in self._registry:
-            return False
+            raise ValueError('%s has not registered spam filter')
         
-        provider = self._registry[type(obj)]
+        return self._registry[type(obj)]
+    
+    def check_spam(self, obj):
+        provider = self.provider_for_object(obj)
         
         if provider.should_check(obj):
             obj_is_spam = self.client.is_spam(
@@ -106,6 +109,25 @@ class SpamFilterSite(object):
             obj_is_spam = False
 
         return obj_is_spam
+    
+    def submit_spam(self, obj):
+        provider = self.provider_for_object(obj)
+        provider.is_spam(obj)
+        return self.client.submit_spam(
+            smart_str(provider.get_comment(obj)),
+            provider.get_ip(obj),
+            provider.get_author(obj),
+            provider.get_email(obj)
+        )
+    
+    def submit_ham(self, obj):
+        provider = self.provider_for_object(obj)
+        return self.client.submit_ham(
+            smart_str(provider.get_comment(obj)),
+            provider.get_ip(obj),
+            provider.get_author(obj),
+            provider.get_email(obj)
+        )
 
 
 site = SpamFilterSite()

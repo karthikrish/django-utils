@@ -18,20 +18,35 @@ class AkismetClient(object):
             }, 'POST') == 'valid'
         except:
             return False
+    
+    def _make_call(self, action, comment, ip, author='', email='', user_agent=''):
+        return fetch_url('http://%s.rest.akismet.com/1.1/%s' % (self.api_key, action), {
+            'comment_content': comment,
+            'comment_type': 'comment',
+            'comment_author': author,
+            'comment_author_email': email,
+            'user_agent': user_agent,
+            'user_ip': ip,
+            'blog': self.blog_url
+        }, 'POST')
 
     def is_spam(self, comment, ip, author='', email=''):
         """
         Determine whether the comment is spam, returns True/False
         """
         try:
-            return fetch_url('http://%s.rest.akismet.com/1.1/comment-check' % self.api_key, {
-                'comment_content': comment,
-                'comment_type': 'comment',
-                'comment_author': author,
-                'comment_author_email': email,
-                'user_agent': '',
-                'user_ip': ip,
-                'blog': self.blog_url
-            }, 'POST') == 'true'
+            return self._make_call('comment-check', comment, ip, author, email) == 'true'
+        except:
+            return False
+    
+    def submit_spam(self, comment, ip, author='', email=''):
+        try:
+            return self._make_call('submit-spam', comment, ip, author, email) == 'valid'
+        except:
+            return False
+    
+    def submit_ham(self, comment, ip, author='', email=''):
+        try:
+            return self._make_call('submit-ham', comment, ip, author, email) == 'valid'
         except:
             return False
