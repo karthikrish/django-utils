@@ -89,7 +89,7 @@ class SpamFilterSite(object):
     
     def provider_for_object(self, obj):
         if not type(obj) in self._registry:
-            raise ValueError('%s has not registered spam filter')
+            raise ValueError('%s has not registered spam filter' % obj)
         
         return self._registry[type(obj)]
     
