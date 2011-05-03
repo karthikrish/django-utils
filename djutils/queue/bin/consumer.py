@@ -13,6 +13,8 @@ if __name__ == '__main__':
         print 'DJANGO_SETTINGS_MODULE environment variable not set, exiting'
         sys.exit(2)
 
+from django.db.models.loading import get_apps
+
 # avoid importing these if the environment variable is not set
 from djutils.daemon import Daemon
 from djutils.queue import autodiscover
@@ -213,7 +215,9 @@ def get_parser():
         help='Number of worker threads, default = 1')
     return parser
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
+    get_apps() # populate app cache
+
     parser = get_parser()
     (options, args) = parser.parse_args()
     
