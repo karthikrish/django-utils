@@ -1,0 +1,26 @@
+{% extends "dashboard/base_dashboard.html" %}
+
+{% block extended_scripts %}
+  <script type="text/javascript">
+    jQuery(document).ready(function($) {
+      var dashboard_data = {{ json_data }};
+      console.log(dashboard_data);
+    });
+  </script>
+{% endblock %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content_header %}Dashboard{% endblock %}
+
+{% block content %}
+  {{ json_data }}
+  {% for panel_title, data in data.items %}
+    <div class="panel">
+      <h3>{{ panel_title }}</h3>
+      <div class="panel-data">
+        {{ data.queryset }}
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}

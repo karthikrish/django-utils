@@ -94,7 +94,7 @@ class QueueTest(TestCase):
         invoker.flush()
     
     def tearDown(self):
-        settings.QUEUE_ALWAYS_EAGER = True
+        settings.QUEUE_ALWAYS_EAGER = self.orig_always_eager
 
     def test_basic_processing(self):
         # make sure UserCommand got registered
@@ -174,6 +174,10 @@ class QueueTest(TestCase):
         for x in xrange(24):
             res = validate_h(datetime.datetime(2011, 1, 1, x))
             self.assertEqual(res, x in valids)
+        
+        edge = crontab(hour=0)
+        self.assertTrue(edge(datetime.datetime(2011, 1, 1, 0, 0)))
+        self.assertFalse(edge(datetime.datetime(2011, 1, 1, 12, 0)))
     
     def test_crontab_minute(self):
         # validates the following minutes

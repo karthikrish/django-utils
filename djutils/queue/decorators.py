@@ -95,6 +95,10 @@ def crontab(month='*', day='*', day_of_week='*', hour='*', minute='*'):
     
     for (date_str, value, acceptable) in validation:
         settings = set([])
+        
+        if isinstance(value, int):
+            value = str(value)
+        
         for piece in value.split(','):
             if piece == '*':
                 settings.update(acceptable)
