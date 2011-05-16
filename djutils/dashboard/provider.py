@@ -1,14 +1,8 @@
-PANEL_PROVIDER_GRAPH = 0
-PANEL_PROVIDER_TEXT = 1
-
-PANEL_PROVIDER_TYPES = (
-    (PANEL_PROVIDER_GRAPH, 'Graph'),
-    (PANEL_PROVIDER_TEXT, 'Text'),
-)
+from djutils.dashboard.models import Panel, PANEL_PROVIDER_GRAPH
 
 
 class PanelProvider(object):
-    """
+    """\
     Base class from which other panel providers should derive.  Much like a
     munin plugin, there is no input provided and the output conforms to a
     standard format.
@@ -24,7 +18,7 @@ class PanelProvider(object):
     """
     
     def get_data(self):
-        """
+        """\
         This method returns data to be displayed, but depending on the panel 
         type the output of the function may differ.
         
@@ -52,3 +46,10 @@ class PanelProvider(object):
     
     def get_priority(self):
         return 20
+    
+    def get_panel_instance(self):
+        panel, _ = Panel.objects.get_or_create(
+            title=self.get_title(),
+            defaults=dict(panel_type=self.get_panel_type())
+        )
+        return panel

@@ -3,8 +3,24 @@
 {% block extended_scripts %}
   <script type="text/javascript">
     jQuery(document).ready(function($) {
-      var dashboard_data = {{ json_data }};
-      console.log(dashboard_data);
+
+      var Dashboard = function() {
+        this.dashboard_data = {};
+      };
+      
+      Dashboard.prototype.load_data = function(data) {
+        for (var i = 0; i < data.length; i++) {
+          var panel_data = data[i],
+              panel_div = $('#dashboard-' + panel_data.id);
+          if (!this.dashboard_data.hasOwnProperty(panel_data.id)) {
+            this.dashboard_data[panel_data.id] = {};
+          }
+        }
+      };
+      
+      var d = new Dashboard();
+      d.load_data({{ panel_data }});
+    
     });
   </script>
 {% endblock %}
@@ -14,13 +30,12 @@
 {% block content_header %}Dashboard{% endblock %}
 
 {% block content %}
-  {{ json_data }}
-  {% for panel_title, data in data.items %}
-    <div class="panel">
-      <h3>{{ panel_title }}</h3>
-      <div class="panel-data">
-        {{ data.queryset }}
+  <div id="dashboard">
+    {% for panel in panel_list %}
+      <div class="panel">
+        <h3>{{ panel.title }}</h3>
+        <div class="panel-data" id="dashboard-{{ panel.id }}"></div>
       </div>
-    </div>
-  {% endfor %}
+    {% endfor %}
+  </div>
 {% endblock %}

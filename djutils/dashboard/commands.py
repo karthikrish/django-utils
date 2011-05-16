@@ -2,8 +2,7 @@ import datetime
 
 from django.conf import settings
 
-from djutils.dashboard.models import PanelData
-from djutils.dashboard.registry import registry
+from djutils.dashboard.models import Panel, PanelData
 from djutils.queue.decorators import periodic_command, crontab
 
 
@@ -15,7 +14,7 @@ def update_panels():
     """
     Simple task which updates the dashboard panels every minute
     """
-    registry.update_panels()
+    Panel.objects.update_panels()
 
 @periodic_command(crontab(hour=0, minute=0))
 def remove_old_panel_data():
