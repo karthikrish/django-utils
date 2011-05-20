@@ -76,13 +76,6 @@ class Panel(models.Model):
 class PanelDataManager(models.Manager):
     def get_most_recent_update(self):
         return self.aggregate(max_date=Max('created_date'))['max_date']
-    
-    def get_data(self, panel, limit=None):
-        queryset = self.filter(panel=panel)
-        if limit:
-            queryset = queryset[:limit]
-        
-        return queryset, queryset.aggregate(max_id=Max('id'))['max_id']
 
 
 class PanelData(models.Model):
