@@ -3,16 +3,20 @@ try:
 except ImportError:
     from django.utils import simplejson as json
 
+from django.conf import settings
 from django.db.models import Max
 from django.shortcuts import render_to_response
-from django.template import RequestContext
 from django.utils.safestring import mark_safe
+from django.views.generic.simple import direct_to_template
 
-from djutils.dashboard.models import Panel, PanelData
+from djutils.dashboard.models import Panel, PanelData, PANEL_AGGREGATE_MINUTE
 from djutils.utils.http import json_response
 
 
-def serialize_panel_data(panels_and_data, limit=50):
+DASHBOARD_DEFAULT_LIMIT = getattr(settings, 'DASHBOARD_DEFAULT_LIMIT', 60)
+
+
+def serialize_panel_data(panels_and_data):
     payload = []
     
     for panel, panel_data_qs in panels_and_data.items():
@@ -25,21 +29,25 @@ def serialize_panel_data(panels_and_data, limit=50):
     
     return payload
 
-def dashboard(request):
+def dashboard_data_endpoint(request, data_type=PANEL_AGGREGATE_MINUTE):
     panels = Panel.objects.get_panels()
     
-    if request.is_ajax():
-        max_id = int(request.GET.get('max_id', 0))
-        panels_and_data = {}
-        
-        for panel in panels:
-            panel_data = panel.data.filter(pk__gt=max_id)
-            panels_and_data[panel] = panel_data
-        
-        payload = serialize_panel_data(panels_and_data)
-        
-        return json_response(payload)
+    max_id = int(request.GET.get('max_id') or 0)
+    limit = int(request.GET.get('limit') or DASHBOARD_DEFAULT_LIMIT)
     
-    return render_to_response('dashboard/dashboard_index.html', {
-        'panel_list': panels,
-    }, context_instance=RequestContext(request))
+    panels_and_data = {}
+    
+    for panel in panels:
+        panels_and_data[panel] = panel.data.filter(
+            aggregate_type=data_type,
+            pk__gt=max_id
+        )[:limit]
+    
+    payload = serialize_panel_data(panels_and_data)
+    
+    return json_response(payload)
+
+def dashboard(request):    
+    return direct_to_template(request, 'dashboard/dashboard_index.html', {
+        'panel_list': Panel.objects.get_panels(),
+    })

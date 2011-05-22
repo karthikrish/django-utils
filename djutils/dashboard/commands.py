@@ -16,7 +16,15 @@ def update_panels():
     """
     Panel.objects.update_panels()
 
-@periodic_command(crontab(hour=0, minute=0))
+@periodic_command(crontab(minute=0, hour='*'))
+def generate_hourly_aggregates():
+    Panel.objects.generate_hourly_aggregates()
+
+@periodic_command(crontab(minute=0, hour=0))
+def generate_daily_aggregates():
+    Panel.objects.generate_daily_aggregates()
+
+@periodic_command(crontab(minute=0, hour=0))
 def remove_old_panel_data():
     """
     Remove old panel data

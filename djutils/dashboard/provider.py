@@ -1,4 +1,4 @@
-from djutils.dashboard.models import Panel, PANEL_PROVIDER_GRAPH
+from djutils.dashboard.models import Panel
 
 
 class PanelProvider(object):
@@ -12,7 +12,6 @@ class PanelProvider(object):
     :method:`get_data` returns a dictionary of data to be plotted
     
     :method:`get_title` returns the title for the panel
-    :method:`get_panel_type` returns the type of panel
     :method:`get_priority` returns an arbitrary integer indicating the order in
         which this panel should be processed
     """
@@ -41,15 +40,9 @@ class PanelProvider(object):
     def get_title(self):
         raise NotImplementedError
     
-    def get_panel_type(self):
-        return PANEL_PROVIDER_GRAPH
-    
     def get_priority(self):
         return 20
     
     def get_panel_instance(self):
-        panel, _ = Panel.objects.get_or_create(
-            title=self.get_title(),
-            defaults=dict(panel_type=self.get_panel_type())
-        )
+        panel, _ = Panel.objects.get_or_create(title=self.get_title())
         return panel

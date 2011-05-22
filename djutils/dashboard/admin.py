@@ -4,12 +4,12 @@ from djutils.dashboard.models import Panel, PanelData
 
 
 class PanelAdmin(admin.ModelAdmin):
-    list_display = ('title', 'panel_type',)
+    list_display = ('title',)
 
 
 class PanelDataAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_date'
-    list_filter = ('panel',)
+    list_filter = ('panel', 'aggregate_type',)
 
 
 admin.site.register(Panel, PanelAdmin)

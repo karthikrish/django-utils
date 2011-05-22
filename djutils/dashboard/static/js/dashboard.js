@@ -1,11 +1,12 @@
-var Dashboard = function(data_endpoint) {
+var Dashboard = function(data_endpoint, selector_key, update_interval, num_points) {
   this.dashboard_data = {};
-  this.points = {};
   this.max_data_point = 0;
   this.data_endpoint = data_endpoint;
+  this.selector_key = selector_key;
+  this.num_points = num_points || 60; /* default to showing 60 points */
   
   var self = this;
-  this.fetch_every(10000, function(data) {
+  this.fetch_every(update_interval * 1000, function(data) {
     self.load_data(data);
     self.plot_data();
   });
@@ -69,14 +70,23 @@ Dashboard.prototype.plot_data = function() {
         return l[0] - r[0];
       });
       
-      for (var i = 0; i < label_data.length; i++)
+      var data_length = label_data.length;
+      
+      /* only display the most recent `num_points` items */
+      for (var i = (data_length - this.num_points); i < data_length; i++)
         normalized.push([i, label_data[i][1]]);
+    
+      /* remove ids we no longer care about */
+      for (var i = 0; i < data_length; i++) {
+        var id_to_remove = label_data[i][0];
+        delete dd[panel_id][label][id_to_remove];
+      }
       
       panel_data.push({
         'label': label,
         'data': normalized
       });
     }
-    $.plot($('#dashboard-' + panel_id), panel_data, {xaxis: {ticks: []}});
+    $.plot($('#dashboard-' + this.selector_key + '-' + panel_id), panel_data, {xaxis: {ticks: []}});
   }
 };
