@@ -106,39 +106,73 @@ class PanelModelTestCase(BasePanelTestCase):
         self.assertEqual(Panel.objects.count(), 2)
     
     def test_basic_data_generation(self):
-        self.create_data(self.seed)
+        self.create_data(self.seed, 2880)
         
         for panel in (self.panel_a, self.panel_b):
-            # check to see that 60 minutes of data was generated
-            self.assertEqual(panel.data.minute_data().count(), 60)
+            # check to see that 2880 minutes of data was generated
+            self.assertEqual(panel.data.minute_data().count(), 2880)
             
-            # check to see that 1 hour of aggregate data was generated
-            self.assertEqual(panel.data.hour_data().count(), 1)
+            # check to see that 48 hours of aggregate data was generated
+            self.assertEqual(panel.data.hour_data().count(), 48)
             
-            # no data for the day should have been generated
-            self.assertEqual(panel.data.day_data().count(), 0)
+            # two days of data generated
+            self.assertEqual(panel.data.day_data().count(), 2)
         
+        # grab the first and last minutes of generated data
         minute_list = list(self.panel_a.data.minute_data())
         first, last = minute_list[-1], minute_list[0]
         
+        # check that the datetimes are what we expect
         self.assertEqual(first.created_date, datetime.datetime(2011, 1, 1, 0, 0))
-        self.assertEqual(last.created_date, datetime.datetime(2011, 1, 1, 0, 59))
+        self.assertEqual(last.created_date, datetime.datetime(2011, 1, 2, 23, 59))
         
-        hour = list(self.panel_a.data.hour_data())[0]
+        # grab the hourly aggregate data
+        hour_list = list(self.panel_a.data.hour_data())
+        first, last = hour_list[-1], hour_list[0]
         
-        self.assertEqual(hour.created_date, datetime.datetime(2011, 1, 1, 0, 59))
+        # check that the datetimes are what we expect
+        self.assertEqual(first.created_date, datetime.datetime(2011, 1, 1, 0, 59))
+        self.assertEqual(last.created_date, datetime.datetime(2011, 1, 2, 23, 59))
         
-        self.assertEqual(first.get_data(), {
+        # grab the daily aggregate data
+        day_list = list(self.panel_a.data.day_data())
+        first, last = day_list[-1], day_list[0]
+        
+        # check that the datetimes are what we expect
+        self.assertEqual(first.created_date, datetime.datetime(2011, 1, 1, 23, 59))
+        self.assertEqual(last.created_date, datetime.datetime(2011, 1, 2, 23, 59))
+        
+        # check that the data being generated is correct
+        self.assertEqual(minute_list[-1].get_data(), {
             'a': 1.0,
             'x': 1.0,
         })
         
-        self.assertEqual(last.get_data(), {
-            'a': 60.0,
+        self.assertEqual(minute_list[0].get_data(), {
+            'a': 2880.0,
             'x': 1.0,
         })
         
-        self.assertEqual(hour.get_data(), {
+        # check first hour of data
+        self.assertEqual(hour_list[-1].get_data(), {
             'a': 30.5,
+            'x': 1.0,
+        })
+        
+        # check last hour of data
+        self.assertEqual(hour_list[0].get_data(), {
+            'a': 2850.0,
+            'x': 1.0,
+        })
+        
+        # check first day of data
+        self.assertEqual(day_list[-1].get_data(), {
+            'a': 720.5,
+            'x': 1.0,
+        })
+        
+        # check last day of data
+        self.assertEqual(day_list[0].get_data(), {
+            'a': 2160.0,
             'x': 1.0,
         })
