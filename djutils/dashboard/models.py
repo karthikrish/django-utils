@@ -52,9 +52,9 @@ class PanelManager(models.Manager):
         
         return data
     
-    def _generate_aggregate(self, timedelta, aggregate_type):
+    def _generate_aggregate(self, timedelta, aggregate_type, seed):
         data = []
-        shared_now = datetime.datetime.now()
+        shared_now = seed or datetime.datetime.now()
         low_date = shared_now - timedelta
         
         # function to sort the panels by priority
@@ -98,11 +98,11 @@ class PanelManager(models.Manager):
         
         return data
     
-    def generate_hourly_aggregates(self):
-        self._generate_aggregate(datetime.timedelta(seconds=3600), PANEL_AGGREGATE_HOUR)
+    def generate_hourly_aggregates(self, seed=None):
+        self._generate_aggregate(datetime.timedelta(seconds=3600), PANEL_AGGREGATE_HOUR, seed)
     
-    def generate_daily_aggregates(self):
-        self._generate_aggregate(datetime.timedelta(seconds=86400), PANEL_AGGREGATE_DAY)
+    def generate_daily_aggregates(self, seed=None):
+        self._generate_aggregate(datetime.timedelta(seconds=86400), PANEL_AGGREGATE_DAY, seed)
     
     def get_panels(self):
         """\

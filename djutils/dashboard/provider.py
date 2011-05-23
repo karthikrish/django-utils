@@ -18,21 +18,12 @@ class PanelProvider(object):
     
     def get_data(self):
         """\
-        This method returns data to be displayed, but depending on the panel 
-        type the output of the function may differ.
-        
-        GRAPH::
+        Must be a dictionary keyed by a set of labels and their values::
         
             {
                 'database_connections': 3,
                 'idle_connections': 1,
                 'idle_in_transaction': 1,
-            }
-        
-        TEXT::
-        
-            {
-                'queries': ['SELECT * FROM ...', 'UPDATE ...',],
             }
         """
         raise NotImplementedError
