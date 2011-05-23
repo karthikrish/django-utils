@@ -1,9 +1,15 @@
 import datetime
 
+try:
+    import json
+except ImportError:
+    from django.utils import simplejson as json
+
 from djutils.dashboard.models import Panel, PanelData, PanelDataSet
 from djutils.dashboard.provider import PanelProvider
 from djutils.dashboard.registry import registry
-from djutils.test import TestCase
+from djutils.dashboard.views import dashboard_data_endpoint, dashboard as dashboard_view
+from djutils.test import RequestFactoryTestCase
 
 
 class TestPanelA(PanelProvider):
@@ -28,8 +34,12 @@ class TestPanelB(PanelProvider):
         return {'b': 1}
 
 
-class BasePanelTestCase(TestCase):
+class DashboardTestCase(RequestFactoryTestCase):
+    urls = 'djutils.dashboard.urls'
+    
     def setUp(self):
+        super(DashboardTestCase, self).setUp()
+        
         TestPanelA._i = 0
         
         registry.register(TestPanelA)
@@ -41,10 +51,10 @@ class BasePanelTestCase(TestCase):
         self.seed = datetime.datetime(2011, 1, 1)
     
     def tearDown(self):
-        registry.unregister(TestPanelA)
-        registry.unregister(TestPanelB)
+        registry._registry = {}
     
-    def create_data(self, seed, how_much=60):
+    def create_data(self, seed=None, how_much=60):
+        seed = seed or self.seed
         cur_time = seed
         
         for i in range(1, how_much + 1):
@@ -77,9 +87,7 @@ class BasePanelTestCase(TestCase):
     
     def clear_data(self):
         Panel.objects.all().delete()
-
-
-class PanelModelTestCase(BasePanelTestCase):
+    
     def test_panel_registry_to_model(self):
         self.assertEqual(len(registry._registry), 2)
         self.assertEqual(Panel.objects.count(), 2)
@@ -176,3 +184,78 @@ class PanelModelTestCase(BasePanelTestCase):
             'a': 2160.0,
             'x': 1.0,
         })
+    
+    def test_dashboard_data_view(self):
+        # check that the dashboard view responds
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        
+        # make sure our two panels are present
+        panel_list = response.context['panel_list']
+        self.assertEqual(len(panel_list), 2)
+        
+        self.assertQuerysetEqual(panel_list, [self.panel_a, self.panel_b])
+        
+        # ensure that only registered panels are displayed
+        registry.unregister(TestPanelA)
+        
+        response = self.client.get('/')
+        panel_list = response.context['panel_list']
+        
+        self.assertQuerysetEqual(panel_list, [self.panel_b])
+        
+        # ensure that even if a panel is newly created, it won't display immediately
+        Panel.objects.all().delete()
+        
+        response = self.client.get('/')
+        panel_list = response.context['panel_list']
+        
+        self.assertEqual(len(panel_list), 0)
+        
+        # create some data and it will be shown
+        Panel.objects.update_panels()
+        
+        response = self.client.get('/')
+        panel_list = response.context['panel_list']
+        
+        self.assertEqual(len(panel_list), 1)
+        panel = panel_list[0]
+        
+        self.assertEqual(panel.title, 'b')
+    
+    def test_dashboard_data_endpoints(self):
+        self.create_data(how_much=120)
+        
+        request = self.request_factory.request()
+        
+        response = dashboard_data_endpoint(request, 0)
+        data = json.loads(response.content)
+        
+        # data is for both panels a and b, and should only be 120 since the
+        # last 60 is all we fetch
+        self.assertEqual(len(data), 120)
+        
+        def transform_data(d):
+            # data looks like a list of {u'point_id': 2, u'data': {u'b': 1.0}, u'panel_id': 2}
+            a_data = [(item['point_id'], item['data']) for item in d if item['panel_id'] == self.panel_a.pk]
+            return [a[1] for a in sorted(a_data)]
+        
+        just_data = transform_data(data)
+        self.assertEqual(just_data[0], {'a': 61.0, 'x': 1.0})
+        self.assertEqual(just_data[-1], {'a': 120.0, 'x': 1.0})
+        
+        # test the hour endpoint
+        response = dashboard_data_endpoint(request, 1)
+        data = json.loads(response.content)
+        
+        # data is for both panels a and b
+        self.assertEqual(len(data), 4)
+        
+        def transform_data(d):
+            # data looks like a list of {u'point_id': 2, u'data': {u'b': 1.0}, u'panel_id': 2}
+            a_data = [(item['point_id'], item['data']) for item in d if item['panel_id'] == self.panel_a.pk]
+            return [a[1] for a in sorted(a_data)]
+        
+        just_data = transform_data(data)
+        self.assertEqual(just_data[0], {'a': 30.5, 'x': 1.0})
+        self.assertEqual(just_data[-1], {'a': 90.0, 'x': 1.0})
